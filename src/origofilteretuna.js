@@ -63,9 +63,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   function getLayersWithType(type) {
     const layersWithType = [];
 
-    viewer.getQueryableLayers().forEach((queryableLayer) => {
-      if (queryableLayer.get('type') === type) {
-        layersWithType.push(queryableLayer);
+    viewer.getLayers().forEach((layer) => {
+      if (layer.get('type') === type) {
+        layersWithType.push(layer);
       }
     });
 
