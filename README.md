@@ -3,7 +3,6 @@
 Gränssnitt för att filtrera föremål i kartan.
 
 **Parametrar:**
-- geoserverUrl: URL till Geoserver för att hämta egenskaper/attribut från lager. Nödvändig.
 - excludedAttributes: Egenskaper/attribut som inte ska listas i gränssnittet. Valfri.
 
 **Exempel:**
@@ -12,7 +11,6 @@ Gränssnitt för att filtrera föremål i kartan.
     var origo = Origo('index.json');
     origo.on('load', function (viewer) {
       var origofilteretuna = Origofilteretuna({
-        geoserverUrl: "http://localhost:8080/geoserver",
         excludedAttributes: ['geom', 'sokid']
       });
       viewer.addComponent(origofilteretuna);

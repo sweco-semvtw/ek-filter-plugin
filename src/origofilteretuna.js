@@ -45,7 +45,6 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const tag = 'Filter - ';
   const dom = Origo.ui.dom;
   const operators = [' = ', ' <> ', ' < ', ' > ', ' <= ', ' >= ', ' like ', ' between '];
-  const geoserverUrl = Object.prototype.hasOwnProperty.call(options, 'geoserverUrl') ? options.geoserverUrl : null;
   const excludedAttributes = Object.prototype.hasOwnProperty.call(options, 'excludedAttributes') ? options.excludedAttributes : [];
 
   function setActive(state) {
@@ -233,12 +232,19 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     removeAttributeRows();
   }
 
-  async function getProperties(layerName) {
+  function getGeoserverUrl(layer) {
+    const url = layer.getSource().getUrls();
+    // Ta bort "wms" eller "wfs"
+    return url[0].slice(0, -3);
+  }
+
+  async function getProperties(layer) {
     const filteredProps = [];
+    const geoserverUrl = getGeoserverUrl(layer);
     const url = [
       `${geoserverUrl}`,
-      '/wfs?version=1.3.0&request=describeFeatureType&outputFormat=application/json&service=WFS',
-      `&typeName=${layerName}`
+      'wfs?version=1.3.0&request=describeFeatureType&outputFormat=application/json&service=WFS',
+      `&typeName=${layer.get('name')}`
     ].join('');
 
     const response = await fetch(url)
@@ -300,7 +306,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     select.addEventListener('change', async (e) => {
       if (e.target.value !== '') {
         selectedLayer = viewer.getLayer(e.target.value);
-        properties = await getProperties(selectedLayer.get('name'));
+        properties = await getProperties(selectedLayer);
 
         initAttributesWithProperties(properties);
         removeAttributeRows();
@@ -558,23 +564,21 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       });
     },
     onAdd(evt) {
-      if (geoserverUrl) {
-        viewer = evt.target;
-        target = `${viewer.getMain().getMapTools().getId()}`;
-        layers = getLayersWithType('WMS');
+      viewer = evt.target;
+      target = `${viewer.getMain().getMapTools().getId()}`;
+      layers = getLayersWithType('WMS');
 
-        this.addComponents([filterButton]);
-        this.render();
+      this.addComponents([filterButton]);
+      this.render();
 
-        initLayerSelect();
-        viewer.on('toggleClickInteraction', (detail) => {
-          if (detail.name === 'filter' && detail.active) {
-            enableInteraction();
-          } else {
-            disableInteraction();
-          }
-        });
-      }
+      initLayerSelect();
+      viewer.on('toggleClickInteraction', (detail) => {
+        if (detail.name === 'filter' && detail.active) {
+          enableInteraction();
+        } else {
+          disableInteraction();
+        }
+      });
     },
     render() {
       document.getElementById(target).appendChild(dom.html(filterDiv.render()));
