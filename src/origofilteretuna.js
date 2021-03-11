@@ -362,7 +362,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       filterBox = Origo.ui.Element({
         tagName: 'div',
         cls: 'flex column control box bg-white overflow-hidden z-index-top o-hidden filter-box',
-        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 320px;'
+        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 20rem;'
       });
 
       simpleModeButton = Origo.ui.Button({
