@@ -46,6 +46,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const dom = Origo.ui.dom;
   const operators = [' = ', ' <> ', ' < ', ' > ', ' <= ', ' >= ', ' like ', ' between '];
   const excludedAttributes = Object.prototype.hasOwnProperty.call(options, 'excludedAttributes') ? options.excludedAttributes : [];
+  const excludedLayers = Object.prototype.hasOwnProperty.call(options, 'excludedLayers') ? options.excludedLayers : [];
 
   function setActive(state) {
     isActive = state;
@@ -60,15 +61,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function getLayersWithType(type) {
-    const layersWithType = [];
-
-    viewer.getLayers().forEach((layer) => {
-      if (layer.get('type') === type) {
-        layersWithType.push(layer);
-      }
-    });
-
-    return layersWithType;
+    return viewer.getLayers().filter(layer => layer.get('type') === type && !excludedLayers.includes(layer.get('name')));
   }
 
   function getCqlFilterFromLayer(layer) {
@@ -239,7 +232,6 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   async function getProperties(layer) {
-    const filteredProps = [];
     const geoserverUrl = getGeoserverUrl(layer);
     const url = [
       `${geoserverUrl}`,
@@ -250,13 +242,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     const response = await fetch(url)
       .then(res => res.json());
 
-    response.featureTypes[0].properties.forEach((prop) => {
-      if (!excludedAttributes.includes(prop.name)) {
-        filteredProps.push(prop);
-      }
-    });
-
-    return filteredProps;
+    return response.featureTypes[0].properties.filter(prop => !excludedAttributes.includes(prop.name));
   }
 
   function initAttributesWithProperties() {

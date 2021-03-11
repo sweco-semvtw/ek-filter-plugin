@@ -4,6 +4,7 @@ Gränssnitt för att filtrera föremål i kartan.
 
 **Parametrar:**
 - excludedAttributes: Egenskaper/attribut som inte ska listas i gränssnittet. Valfri.
+- excludedLayers: Lager som inte ska listas i gränssnittet. Baseras på lagrets namn. Valfri.
 
 **Exempel:**
 ```HTML
@@ -11,7 +12,8 @@ Gränssnitt för att filtrera föremål i kartan.
     var origo = Origo('index.json');
     origo.on('load', function (viewer) {
       var origofilteretuna = Origofilteretuna({
-        excludedAttributes: ['geom', 'sokid']
+        excludedAttributes: ['geom', 'sokid'],
+        excludedLayers: ['sokvyx_djupdata_djuppunkter_vy']
       });
       viewer.addComponent(origofilteretuna);
     });
