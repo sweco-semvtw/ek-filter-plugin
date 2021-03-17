@@ -13,6 +13,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let removeAllFilterButton;
   let removeFilterButton;
   let removeAttributeButton;
+  let removeAttributeButtonSpan;
   let addAttributeButton;
   let modeControl;
   let dividerTop;
@@ -64,8 +65,12 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     viewer.dispatch('toggleClickInteraction', detail);
   }
 
-  function getLayersWithType() {
+  function getVisibleLayers() {
     return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')) && layer.get('visible'));
+  }
+
+  function getAllLayers() {
+    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')));
   }
 
   function getCqlFilterFromLayer(layer) {
@@ -74,6 +79,10 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       const params = layer.getSource().getParams();
       if (params.CQL_FILTER) {
         filter = params.CQL_FILTER;
+      }
+    } else if (layer.get('type') === 'WFS') {
+      if (layer.get('cqlFilter')) {
+        filter = layer.get('cqlFilter');
       }
     }
     return filter;
@@ -92,6 +101,70 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     } else {
       document.getElementById(statusIcon.getId()).classList.add('o-hidden');
     }
+  }
+
+  function checkSpecialCharacters(item) {
+    const specialChars = ['å', 'ä', 'ö', 'Å', 'Ä', 'Ö'];
+    let hasSpecialChar = false;
+
+    specialChars.forEach((char) => {
+      if (item.includes(char)) {
+        hasSpecialChar = true;
+      }
+    });
+
+    return hasSpecialChar;
+  }
+
+  function getSourceUrl(layer) {
+    const url = viewer.getSource(layer.get('sourceName')).url;
+    // Ta bort "wms" eller "wfs"
+    return url.slice(0, -3);
+  }
+
+  async function getWfsFeatures(layer, filter) {
+    const filterArr = [];
+    if (filter) {
+      const tempArr = filter.split(' ');
+      // OBS! Om CQL filter sätts på en egenskap med specialtecken t.ex. å, ä eller ö måste egenskapen kapslas in med enkel-citat
+      // OBS! Om en egenskap behövs kapslas in så behövs de andra egenskaperna i anropet också det.
+      const hasSpecialChar = checkSpecialCharacters(filter);
+
+      tempArr.forEach((item, index) => {
+        const isAttribute = tempArr[index + 1] === '=';
+        if (hasSpecialChar && isAttribute) {
+          filterArr.push(`'${item}'`);
+        } else {
+          filterArr.push(item);
+        }
+      });
+    }
+    const sourceUrl = getSourceUrl(layer);
+    const url = [
+      `${sourceUrl}`,
+      'wfs?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application/json',
+      `&typeName=${layer.get('name')}`,
+      `${filter ? `&CQL_FILTER=${filterArr.join(' ')}` : ''}`
+    ].join('');
+
+    const response = await fetch(url)
+      .then(res => res.json());
+
+    return response;
+  }
+
+  async function getProperties(layer) {
+    const sourceUrl = getSourceUrl(layer);
+    const url = [
+      `${sourceUrl}`,
+      'wfs?version=1.3.0&request=describeFeatureType&outputFormat=application/json&service=WFS',
+      `&typeName=${layer.get('name')}`
+    ].join('');
+
+    const response = await fetch(url)
+      .then(res => res.json());
+
+    return response.featureTypes[0].properties.filter(prop => !excludedAttributes.includes(prop.name));
   }
 
   async function addAttributeRow(attribute, operator, value, firstRow) {
@@ -205,6 +278,15 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     select.options[select.selectedIndex].style = `background-color: ${optionBackgroundColor}`;
   }
 
+  async function setWfsFeaturesOnLayer(layer, filter) {
+    layer.set('cqlFilter', filter);
+    const features = await getWfsFeatures(layer, filter);
+    const layerSource = layer.getSource();
+
+    layerSource.clear(true);
+    layerSource.addFeatures(layerSource.getFormat().readFeatures(features));
+  }
+
   function createCqlFilter() {
     let filterString = '';
     if (mode === 'simple') {
@@ -230,6 +312,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
     if (selectedLayer.get('type') === 'WMS') {
       selectedLayer.getSource().updateParams({ layers: selectedLayer.get('name'), CQL_FILTER: filterString });
+    } else if (selectedLayer.get('type') === 'WFS') {
+      setWfsFeaturesOnLayer(selectedLayer, filterString);
     }
 
     if (getCqlFilterFromLayer(selectedLayer) !== '') {
@@ -240,7 +324,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
   function removeCqlFilter() {
     document.getElementById(cqlStringTextarea.getId()).value = '';
-    selectedLayer.getSource().updateParams({ layers: selectedLayer.get('name'), CQL_FILTER: undefined });
+    if (selectedLayer.get('type') === 'WMS') {
+      selectedLayer.getSource().updateParams({ layers: selectedLayer.get('name'), CQL_FILTER: undefined });
+    } else if (selectedLayer.get('type') === 'WFS') {
+      setWfsFeaturesOnLayer(selectedLayer);
+    }
     removeFilterTagAndBackground();
     removeAttributeRows();
     setNumberOfLayersWithFilter();
@@ -248,8 +336,12 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
   function removeAllCqlFilter() {
     document.getElementById(cqlStringTextarea.getId()).value = '';
-    layers.forEach((layer) => {
-      layer.getSource().updateParams({ layers: layer.get('name'), CQL_FILTER: undefined });
+    getAllLayers().forEach((layer) => {
+      if (layer.get('type') === 'WMS') {
+        layer.getSource().updateParams({ layers: layer.get('name'), CQL_FILTER: undefined });
+      } else if (layer.get('type') === 'WFS') {
+        setWfsFeaturesOnLayer(layer);
+      }
     });
     removeAllFilterTagsAndBackgrounds();
     removeAttributeRows();
@@ -271,26 +363,6 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         oprSelect.appendChild(opt);
       });
     });
-  }
-
-  function getGeoserverUrl(layer) {
-    const url = viewer.getSource(layer.get('sourceName')).url;
-    // Ta bort "wms" eller "wfs"
-    return url.slice(0, -3);
-  }
-
-  async function getProperties(layer) {
-    const geoserverUrl = getGeoserverUrl(layer);
-    const url = [
-      `${geoserverUrl}`,
-      'wfs?version=1.3.0&request=describeFeatureType&outputFormat=application/json&service=WFS',
-      `&typeName=${layer.get('name')}`
-    ].join('');
-
-    const response = await fetch(url)
-      .then(res => res.json());
-
-    return response.featureTypes[0].properties.filter(prop => !excludedAttributes.includes(prop.name));
   }
 
   function initAttributesWithProperties() {
@@ -318,6 +390,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     while (select.firstChild) {
       select.removeChild(select.firstChild);
     }
+
+    const firstOpt = document.createElement('option');
+    firstOpt.value = '';
+    firstOpt.text = 'Välj...';
+    select.appendChild(firstOpt);
 
     // Lägg till alla lager till select
     layers.forEach((queryableLayer) => {
@@ -500,11 +577,17 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         style: 'height: 1.5rem; margin: 0; width: 20%;'
       });
 
-      removeAttributeButton = Origo.ui.Button({
+      removeAttributeButtonSpan = Origo.ui.Element({
+        tagName: 'span',
+        style: 'position: absolute; top: -4px; left: 2px;',
+        innerHTML: '&times;'
+      });
+
+      removeAttributeButton = Origo.ui.Element({
+        tagName: 'button',
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip removeAttributeButton o-hidden',
-        style: 'float: right; background-color: #ffa6a6; padding: 0.1rem; height: 24px; margin-top: 2px;',
-        textCls: 'font-size: 1rem; font-weight: bold; line-height: 0px;',
-        text: '&times;'
+        style: 'float: right; background-color: #ffa6a6; padding: 0.1rem; height: 16px; width: 16px; margin-top: 2px; position: relative; top: 4px;',
+        components: [removeAttributeButtonSpan]
       });
 
       attributeRow = Origo.ui.Element({
@@ -600,7 +683,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       layerText = Origo.ui.Element({
         tagName: 'p',
         cls: 'text-smaller',
-        innerHTML: 'Lager:'
+        innerHTML: 'Tända lager:'
       });
 
       filterBoxContent = Origo.ui.Element({
@@ -611,7 +694,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     onAdd(evt) {
       viewer = evt.target;
       target = `${viewer.getMain().getMapTools().getId()}`;
-      layers = getLayersWithType('WMS');
+      layers = getVisibleLayers();
 
       this.addComponents([filterButton]);
       this.render();
@@ -619,16 +702,20 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       renderLayerSelect();
       viewer.getLayers().forEach((layer) => {
         layer.on('change:visible', async () => {
-          layers = getLayersWithType('WMS');
+          layers = getVisibleLayers();
           renderLayerSelect();
           removeAttributeRows();
-          properties = await getProperties(selectedLayer);
-          initAttributesWithProperties(properties);
+          if (layers.length > 0 && selectedLayer) {
+            properties = await getProperties(selectedLayer);
+            initAttributesWithProperties(properties);
 
-          const filter = getCqlFilterFromLayer(selectedLayer);
-          if (filter !== '') {
-            document.getElementById(cqlStringTextarea.getId()).value = filter;
-            setAttributeRowsToFilter(filter);
+            const filter = getCqlFilterFromLayer(selectedLayer);
+            if (filter !== '') {
+              document.getElementById(cqlStringTextarea.getId()).value = filter;
+              setAttributeRowsToFilter(filter);
+            }
+          } else {
+            document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
           }
         });
       });
