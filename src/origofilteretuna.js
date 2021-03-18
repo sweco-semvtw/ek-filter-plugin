@@ -43,8 +43,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let selectedLayer;
   let layers;
   let properties;
+  let sharemap;
+  let filterJson = { filters: [] };
   let isActive = false;
   let mode = 'simple';
+  const name = 'origofilteretuna';
   const dom = Origo.ui.dom;
   const layerTypes = ['WMS', 'WFS'];
   const operators = [' = ', ' <> ', ' < ', ' > ', ' <= ', ' >= ', ' like ', ' between '];
@@ -255,11 +258,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     }
   }
 
-  function removeFilterTagAndBackground() {
+  function removeFilterTagAndBackground(index) {
     const select = document.getElementById(layerSelect.getId());
-    const currentText = select.options[select.selectedIndex].text;
-    select.options[select.selectedIndex].text = currentText.replace(filterPrefix, '');
-    select.options[select.selectedIndex].style = '';
+    const currentText = select.options[index].text;
+    select.options[index].text = currentText.replace(filterPrefix, '');
+    select.options[index].style = '';
   }
 
   function removeAllFilterTagsAndBackgrounds() {
@@ -270,12 +273,16 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     });
   }
 
-  function addFilterTagAndBackground() {
-    removeFilterTagAndBackground();
+  function addFilterTagAndBackground(layerName) {
     const select = document.getElementById(layerSelect.getId());
-    const currentText = select.options[select.selectedIndex].text;
-    select.options[select.selectedIndex].text = `${filterPrefix}${currentText}`;
-    select.options[select.selectedIndex].style = `background-color: ${optionBackgroundColor}`;
+    select.options.forEach((option, index) => {
+      if (option.value === layerName) {
+        removeFilterTagAndBackground(index);
+        const currentText = option.text;
+        select.options[index].text = `${filterPrefix}${currentText}`;
+        select.options[index].style = `background-color: ${optionBackgroundColor}`;
+      }
+    });
   }
 
   async function setWfsFeaturesOnLayer(layer, filter) {
@@ -285,6 +292,37 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
     layerSource.clear(true);
     layerSource.addFeatures(layerSource.getFormat().readFeatures(features));
+  }
+
+  function setSharedFilters() {
+    filterJson.filters.forEach(async (filter) => {
+      const layer = viewer.getLayer(filter.layerName);
+      if (layer.get('type') === 'WMS') {
+        layer.getSource().updateParams({ layers: filter.layerName, CQL_FILTER: filter.cqlFilter });
+        addFilterTagAndBackground(filter.layerName);
+        setNumberOfLayersWithFilter();
+      } else if (layer.get('type') === 'WFS') {
+        layer.getSource().once('change', () => {
+          if (layer.getSource().getState() === 'ready') {
+            setWfsFeaturesOnLayer(layer, filter.cqlFilter);
+            addFilterTagAndBackground(filter.layerName);
+            setNumberOfLayersWithFilter();
+          }
+        });
+      }
+    });
+  }
+
+  function removeFromJson(layerName) {
+    if (layerName) {
+      filterJson.filters.forEach((filter, index) => {
+        if (filter.layerName === layerName) {
+          filterJson.filters.splice(index, 1);
+        }
+      });
+    } else {
+      filterJson = { filters: [] };
+    }
   }
 
   function createCqlFilter() {
@@ -317,8 +355,10 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     }
 
     if (getCqlFilterFromLayer(selectedLayer) !== '') {
-      addFilterTagAndBackground();
+      addFilterTagAndBackground(selectedLayer.get('name'));
       setNumberOfLayersWithFilter();
+      removeFromJson(selectedLayer.get('name'));
+      filterJson.filters.push({ layerName: selectedLayer.get('name'), cqlFilter: filterString });
     }
   }
 
@@ -329,8 +369,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     } else if (selectedLayer.get('type') === 'WFS') {
       setWfsFeaturesOnLayer(selectedLayer);
     }
-    removeFilterTagAndBackground();
+
+    const index = document.getElementById(layerSelect.getId()).selectedIndex;
+    removeFilterTagAndBackground(index);
     removeAttributeRows();
+    removeFromJson(selectedLayer.get('name'));
     setNumberOfLayersWithFilter();
   }
 
@@ -345,6 +388,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     });
     removeAllFilterTagsAndBackgrounds();
     removeAttributeRows();
+    removeFromJson();
     setNumberOfLayersWithFilter();
   }
 
@@ -451,6 +495,10 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     document.getElementById(filterBox.getId()).classList.add('o-hidden');
 
     setActive(false);
+  }
+
+  function addToMapState(mapState) {
+    mapState[name] = filterJson;
   }
 
   return Origo.ui.Component({
@@ -695,6 +743,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       viewer = evt.target;
       target = `${viewer.getMain().getMapTools().getId()}`;
       layers = getVisibleLayers();
+      sharemap = viewer.getControlByName('sharemap');
+      sharemap.addParamsToGetMapState(name, addToMapState);
 
       this.addComponents([filterButton]);
       this.render();
@@ -727,6 +777,12 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
           disableInteraction();
         }
       });
+
+      const urlParams = viewer.getUrlParams();
+      if (urlParams[name] && urlParams[name].filters.length > 0) {
+        filterJson = urlParams[name];
+        setSharedFilters();
+      }
     },
     render() {
       document.getElementById(target).appendChild(dom.html(filterDiv.render()));
