@@ -69,11 +69,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function getVisibleLayers() {
-    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')) && layer.get('visible'));
+    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')) && layer.get('visible') && !layer.get('ArcGIS'));
   }
 
   function getAllLayers() {
-    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')));
+    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name') && !layer.get('ArcGIS')));
   }
 
   function getCqlFilterFromLayer(layer) {
@@ -441,11 +441,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     select.appendChild(firstOpt);
 
     // Lägg till alla lager till select
-    layers.forEach((queryableLayer) => {
+    layers.forEach((layer) => {
       const opt = document.createElement('option');
-      const filter = getCqlFilterFromLayer(queryableLayer);
-      opt.value = queryableLayer.get('name');
-      opt.text = `${filter !== '' ? filterPrefix : ''}${queryableLayer.get('title')}`;
+      const filter = getCqlFilterFromLayer(layer);
+      opt.value = layer.get('name');
+      opt.text = `${filter !== '' ? filterPrefix : ''}${layer.get('title')}`;
       opt.style = filter !== '' ? `background-color: ${optionBackgroundColor}` : '';
       select.appendChild(opt);
     });
