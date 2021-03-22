@@ -9,6 +9,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let filterBoxContent;
   let simpleModeButton;
   let advancedModeButton;
+  let myFilterModeButton;
   let createFilterButton;
   let removeAllFilterButton;
   let removeFilterButton;
@@ -36,6 +37,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let simpleDiv;
   let advancedDiv;
   let filterContentDiv;
+  let filterInnerDiv;
+  let myFilterDiv;
+  let myFilterList;
   let cqlStringTextarea;
   let filterInput;
   let statusIcon;
@@ -98,6 +102,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   function setNumberOfLayersWithFilter() {
     const numberOfFilters = getNumberOfLayersWithFilter();
     document.getElementById(statusNumbers.getId()).innerHTML = numberOfFilters;
+    document.getElementById('myFilterCount').innerHTML = numberOfFilters;
 
     if (numberOfFilters > 0) {
       document.getElementById(statusIcon.getId()).classList.remove('o-hidden');
@@ -237,19 +242,42 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     }
   }
 
+  function setMyFilters() {
+    document.getElementById(myFilterList.getId()).innerHTML = '';
+    filterJson.filters.forEach((filter) => {
+      const node = document.createElement('li');
+      node.classList = 'rounded border text-smaller padding-small margin-top-small';
+      node.innerHTML = `<p><span class="text-weight-bold">Lager: </span>${filter.layerName}</p><p><span class="text-weight-bold">Filter: </span>${filter.cqlFilter}</p>`;
+      document.getElementById(myFilterList.getId()).appendChild(node);
+    });
+  }
+
   function setMode(modeString) {
     mode = modeString;
 
     if (mode === 'simple') {
       document.getElementById(simpleModeButton.getId()).classList.add('active');
       document.getElementById(advancedModeButton.getId()).classList.remove('active');
+      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
       document.getElementById(simpleDiv.getId()).classList.remove('o-hidden');
       document.getElementById(advancedDiv.getId()).classList.add('o-hidden');
+      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
     } else if (mode === 'advanced') {
       document.getElementById(simpleModeButton.getId()).classList.remove('active');
       document.getElementById(advancedModeButton.getId()).classList.add('active');
+      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
       document.getElementById(simpleDiv.getId()).classList.add('o-hidden');
       document.getElementById(advancedDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
+    } else if (mode === 'myfilter') {
+      document.getElementById(simpleModeButton.getId()).classList.remove('active');
+      document.getElementById(advancedModeButton.getId()).classList.remove('active');
+      document.getElementById(myFilterModeButton.getId()).classList.add('active');
+      document.getElementById(filterInnerDiv.getId()).classList.add('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.remove('o-hidden');
+      setMyFilters();
     }
 
     if (selectedLayer) {
@@ -544,18 +572,33 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       simpleModeButton = Origo.ui.Button({
         cls: 'grow light text-smaller padding-left-large active',
         text: 'Enkel',
+        style: {
+          width: '1rem'
+        },
         state: mode === 'simple' ? 'active' : 'initial'
       });
 
       advancedModeButton = Origo.ui.Button({
         cls: 'grow light text-smaller padding-right-large',
         text: '1337-läge',
+        style: {
+          width: '1rem'
+        },
         state: mode === 'advanced' ? 'active' : 'initial'
+      });
+
+      myFilterModeButton = Origo.ui.Button({
+        cls: 'grow light text-smaller padding-right-large',
+        text: 'Mina filter (<span id="myFilterCount">0</span>)',
+        style: {
+          width: '1rem'
+        },
+        state: mode === 'myfilter' ? 'active' : 'initial'
       });
 
       modeControl = Origo.ui.ToggleGroup({
         cls: 'flex rounded bg-inverted border',
-        components: [simpleModeButton, advancedModeButton],
+        components: [simpleModeButton, advancedModeButton, myFilterModeButton],
         style: { display: 'flex' }
       });
 
@@ -734,9 +777,24 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         innerHTML: 'Tända lager:'
       });
 
+      filterInnerDiv = Origo.ui.Element({
+        tagName: 'div',
+        components: [layerText, layerSelect, filterContentDiv]
+      });
+
+      myFilterList = Origo.ui.Element({
+        tagName: 'ul'
+      });
+
+      myFilterDiv = Origo.ui.Element({
+        tagName: 'div',
+        cls: 'o-hidden',
+        components: [myFilterList]
+      });
+
       filterBoxContent = Origo.ui.Element({
         tagName: 'div',
-        components: [modeControl, layerText, layerSelect, filterContentDiv]
+        components: [modeControl, filterInnerDiv, myFilterDiv]
       });
     },
     onAdd(evt) {
@@ -796,6 +854,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       document.getElementById(addAttributeButton.getId()).addEventListener('click', () => addAttributeRow());
       document.getElementById(simpleModeButton.getId()).addEventListener('click', () => setMode('simple'));
       document.getElementById(advancedModeButton.getId()).addEventListener('click', () => setMode('advanced'));
+      document.getElementById(myFilterModeButton.getId()).addEventListener('click', () => setMode('myfilter'));
 
       this.dispatch('render');
     }
