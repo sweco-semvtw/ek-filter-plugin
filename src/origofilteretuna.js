@@ -139,7 +139,14 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       const hasSpecialChar = checkSpecialCharacters(filter);
 
       tempArr.forEach((item, index) => {
-        const isAttribute = tempArr[index + 1] === '=';
+        let isAttribute = false;
+
+        operators.forEach((operator) => {
+          if (tempArr[index + 1] === operator.trim()) {
+            isAttribute = true;
+          }
+        });
+
         if (hasSpecialChar && isAttribute) {
           filterArr.push(`'${item}'`);
         } else {
