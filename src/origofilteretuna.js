@@ -16,6 +16,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let removeAttributeButton;
   let removeAttributeButtonSpan;
   let addAttributeButton;
+  let myFilterRemoveButton;
+  let myFilterEditButton;
   let modeControl;
   let dividerTop;
   let dividerBottom;
@@ -185,6 +187,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   async function addAttributeRow(attribute, operator, value, firstRow) {
     const row = document.getElementsByClassName('attributeRow')[0];
     const clone = firstRow ? row : row.cloneNode(true);
+    properties = await getProperties(selectedLayer);
 
     if (attribute) {
       const attrIndex = properties.findIndex(prop => prop.name === attribute);
@@ -253,44 +256,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     document.getElementById(myFilterList.getId()).innerHTML = '';
     filterJson.filters.forEach((filter) => {
       const node = document.createElement('li');
-      node.classList = 'rounded border text-smaller padding-small margin-top-small';
-      node.innerHTML = `<p><span class="text-weight-bold">Lager: </span>${filter.layerName}</p><p><span class="text-weight-bold">Filter: </span>${filter.cqlFilter}</p>`;
+      node.id = filter.layerName;
+      node.classList = 'rounded border text-smaller padding-small margin-top-small relative o-tooltip';
+      node.innerHTML = `<p style="overflow-wrap: break-word;"><span class="text-weight-bold">Lager: </span>${filter.title}</p><p style="overflow-wrap: break-word;"><span class="text-weight-bold">Filter: </span>${filter.cqlFilter}</p>${myFilterRemoveButton.render()}${myFilterEditButton.render()}`;
       document.getElementById(myFilterList.getId()).appendChild(node);
     });
-  }
-
-  function setMode(modeString) {
-    mode = modeString;
-
-    if (mode === 'simple') {
-      document.getElementById(simpleModeButton.getId()).classList.add('active');
-      document.getElementById(advancedModeButton.getId()).classList.remove('active');
-      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
-      document.getElementById(simpleDiv.getId()).classList.remove('o-hidden');
-      document.getElementById(advancedDiv.getId()).classList.add('o-hidden');
-      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
-      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
-    } else if (mode === 'advanced') {
-      document.getElementById(simpleModeButton.getId()).classList.remove('active');
-      document.getElementById(advancedModeButton.getId()).classList.add('active');
-      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
-      document.getElementById(simpleDiv.getId()).classList.add('o-hidden');
-      document.getElementById(advancedDiv.getId()).classList.remove('o-hidden');
-      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
-      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
-    } else if (mode === 'myfilter') {
-      document.getElementById(simpleModeButton.getId()).classList.remove('active');
-      document.getElementById(advancedModeButton.getId()).classList.remove('active');
-      document.getElementById(myFilterModeButton.getId()).classList.add('active');
-      document.getElementById(filterInnerDiv.getId()).classList.add('o-hidden');
-      document.getElementById(myFilterDiv.getId()).classList.remove('o-hidden');
-      setMyFilters();
-    }
-
-    if (selectedLayer) {
-      const filterString = getCqlFilterFromLayer(selectedLayer);
-      setAttributeRowsToFilter(filterString);
-    }
   }
 
   function removeFilterTagAndBackground(index) {
@@ -393,22 +363,30 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       addFilterTagAndBackground(selectedLayer.get('name'));
       setNumberOfLayersWithFilter();
       removeFromJson(selectedLayer.get('name'));
-      filterJson.filters.push({ layerName: selectedLayer.get('name'), cqlFilter: filterString });
+      filterJson.filters.push({
+        title: selectedLayer.get('title'),
+        layerName: selectedLayer.get('name'),
+        cqlFilter: filterString
+      });
     }
   }
 
-  function removeCqlFilter() {
+  function removeCqlFilter(layerName) {
+    const layer = layerName ? viewer.getLayer(layerName) : selectedLayer;
     document.getElementById(cqlStringTextarea.getId()).value = '';
-    if (selectedLayer.get('type') === 'WMS') {
-      selectedLayer.getSource().updateParams({ layers: selectedLayer.get('name'), CQL_FILTER: undefined });
-    } else if (selectedLayer.get('type') === 'WFS') {
-      setWfsFeaturesOnLayer(selectedLayer);
+
+    if (layer.get('type') === 'WMS') {
+      layer.getSource().updateParams({ layers: layer.get('name'), CQL_FILTER: undefined });
+    } else if (layer.get('type') === 'WFS') {
+      setWfsFeaturesOnLayer(layer);
     }
 
-    const index = document.getElementById(layerSelect.getId()).selectedIndex;
+    const select = document.getElementById(layerSelect.getId());
+    const index = layerName ? select.querySelector(`option[value="${layerName}"]`).index : select.selectedIndex;
+
     removeFilterTagAndBackground(index);
     removeAttributeRows();
-    removeFromJson(selectedLayer.get('name'));
+    removeFromJson(layer.get('name'));
     setNumberOfLayersWithFilter();
   }
 
@@ -515,6 +493,68 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     });
   }
 
+  function setMode(modeString) {
+    mode = modeString;
+
+    if (mode === 'simple') {
+      document.getElementById(simpleModeButton.getId()).classList.add('active');
+      document.getElementById(advancedModeButton.getId()).classList.remove('active');
+      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
+      document.getElementById(simpleDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(advancedDiv.getId()).classList.add('o-hidden');
+      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
+    } else if (mode === 'advanced') {
+      document.getElementById(simpleModeButton.getId()).classList.remove('active');
+      document.getElementById(advancedModeButton.getId()).classList.add('active');
+      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
+      document.getElementById(simpleDiv.getId()).classList.add('o-hidden');
+      document.getElementById(advancedDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
+    } else if (mode === 'myfilter') {
+      document.getElementById(simpleModeButton.getId()).classList.remove('active');
+      document.getElementById(advancedModeButton.getId()).classList.remove('active');
+      document.getElementById(myFilterModeButton.getId()).classList.add('active');
+      document.getElementById(filterInnerDiv.getId()).classList.add('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.remove('o-hidden');
+      setMyFilters();
+
+      document.getElementsByClassName('remove-filter').forEach((el) => {
+        el.addEventListener('click', () => {
+          const layerName = el.parentElement.id;
+          removeCqlFilter(layerName);
+          setMyFilters();
+          setMode('myfilter');
+        });
+      });
+
+      document.getElementsByClassName('edit-filter').forEach((el) => {
+        el.addEventListener('click', () => {
+          const layerName = el.parentElement.id;
+          const select = document.getElementById(layerSelect.getId());
+          select.selectedIndex = select.querySelector(`option[value="${layerName}"]`).index;
+          select.dispatchEvent(new Event('change'));
+
+          const filterString = getCqlFilterFromLayer(viewer.getLayer(layerName));
+          const hasOR = filterString.includes(' OR ');
+          const hasAND = filterString.includes(' AND ');
+
+          // Om det finns både OR och AND så kan det inte visas korrekt i det enkla gränssnittet.
+          if (hasOR && hasAND) {
+            setMode('advanced');
+          } else {
+            setMode('simple');
+          }
+        });
+      });
+    }
+
+    if (selectedLayer) {
+      const filterString = getCqlFilterFromLayer(selectedLayer);
+      setAttributeRowsToFilter(filterString);
+    }
+  }
 
   function enableInteraction() {
     document.getElementById(filterButton.getId()).style.color = '#008ff5';
@@ -802,6 +842,26 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       filterBoxContent = Origo.ui.Element({
         tagName: 'div',
         components: [modeControl, filterInnerDiv, myFilterDiv]
+      });
+
+      myFilterRemoveButton = Origo.ui.Button({
+        cls: 'icon-smaller small round absolute grey-lightest z-index-top remove-filter',
+        style: {
+          right: '-0.3rem',
+          top: '-0.3rem'
+        },
+        icon: '#ic_delete_24px',
+        ariaLabel: 'Stäng'
+      });
+
+      myFilterEditButton = Origo.ui.Button({
+        cls: 'icon-smaller small round absolute grey-lightest z-index-top edit-filter',
+        style: {
+          right: '1.5rem',
+          top: '-0.3rem'
+        },
+        icon: '#fa-pencil',
+        ariaLabel: 'Redigera'
       });
     },
     onAdd(evt) {
