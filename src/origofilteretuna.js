@@ -627,7 +627,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
       advancedModeButton = Origo.ui.Button({
         cls: 'grow light text-smaller padding-right-large',
-        text: '1337-läge',
+        text: 'Avancerad',
         style: {
           width: '1rem'
         },
