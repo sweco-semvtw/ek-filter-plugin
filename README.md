@@ -8,6 +8,11 @@ Gränssnitt för att filtrera föremål i kartan.
 - optionBackgroundColor: Bakgrundsfärg på filterade lager i lagerlistan. Valfri.
 - filterPrefix: Prefix på filtrerade lager i lagerlistan. Valfri.
 
+**Material icons som används:**
+- ic_delete_24px
+- ic_edit_24px
+- ic_visibility_24px
+
 **Exempel:**
 ```HTML
 <script type="text/javascript">
