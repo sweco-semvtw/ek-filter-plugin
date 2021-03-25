@@ -908,7 +908,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       target = `${viewer.getMain().getMapTools().getId()}`;
       layers = getVisibleLayers();
       sharemap = viewer.getControlByName('sharemap');
-      sharemap.addParamsToGetMapState(name, addToMapState);
+      if (sharemap && sharemap.options.storeMethod === 'saveStateToServer') {
+        sharemap.addParamsToGetMapState(name, addToMapState);
+      }
 
       this.addComponents([filterButton]);
       this.render();
