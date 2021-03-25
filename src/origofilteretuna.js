@@ -681,7 +681,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       filterBox = Origo.ui.Element({
         tagName: 'div',
         cls: 'flex column control box bg-white overflow-hidden z-index-top o-hidden filter-box',
-        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 320px;'
+        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 20rem;'
       });
 
       layerSelect = Origo.ui.Element({
@@ -694,13 +694,13 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       attributeSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'attributeSelect',
-        style: 'font-size: 0.8rem; padding: 0.2rem; width: 44%;'
+        style: 'font-size: 0.8rem; padding: 0.2rem; width: 8rem;'
       });
 
       operatorSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'operatorSelect',
-        style: 'font-size: 0.8rem; padding: 0.2rem; width: 80px; margin-left: 0.4rem;'
+        style: 'font-size: 0.8rem; padding: 0.2rem; width: 5rem; margin-left: 0.4rem;'
       });
 
       logicSelect = Origo.ui.Element({
@@ -741,7 +741,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         cls: 'placeholder-text-smaller smaller',
         value: '',
         placeholderText: '...',
-        style: 'height: 1.5rem; margin: 0; width: 20%;'
+        style: 'height: 1.5rem; margin: 0; width: 4rem;'
       });
 
       removeAttributeButtonSpan = Origo.ui.Element({
