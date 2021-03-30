@@ -63,6 +63,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const excludedLayers = Object.prototype.hasOwnProperty.call(options, 'excludedLayers') ? options.excludedLayers : [];
   const optionBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'optionBackgroundColor') ? options.optionBackgroundColor : '#e1f2fe';
   const filterPrefix = Object.prototype.hasOwnProperty.call(options, 'filterPrefix') ? options.filterPrefix : 'Filter - ';
+  const indicatorBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'indicatorBackgroundColor') ? options.indicatorBackgroundColor : '#ff0000';
+  const indicatorTextColor = Object.prototype.hasOwnProperty.call(options, 'indicatorTextColor') ? options.indicatorTextColor : '#ffffff';
 
   function setActive(state) {
     isActive = state;
@@ -610,14 +612,28 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     onInit() {
       statusNumbers = Origo.ui.Element({
         tagName: 'span',
-        style: 'color: white; position: absolute; font-size: 0.7rem; left: 5px; top: 0px;',
+        style: {
+          color: `${indicatorTextColor}`,
+          position: 'absolute',
+          left: '5px',
+          top: '0px',
+          'font-size': '0.7rem'
+        },
         innerHTML: '0'
       });
 
       statusIcon = Origo.ui.Element({
         tagName: 'div',
         cls: 'padding-small margin-bottom-smaller round light box-shadow o-hidden',
-        style: 'width: 10px; height: 10px; bottom: 0; position: absolute; right: 0px; z-index: 1; background-color: red;',
+        style: {
+          width: '10px',
+          height: '10px',
+          bottom: 0,
+          position: 'absolute',
+          right: '0px',
+          'background-color': `${indicatorBackgroundColor}`,
+          'z-index': 1
+        },
         components: [statusNumbers]
       });
 
