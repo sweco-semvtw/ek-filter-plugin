@@ -1,4 +1,5 @@
 import Origo from 'Origo';
+import isOverlapping from './utils/overlapping';
 
 const Origofilteretuna = function Origofilteretuna(options = {}) {
   let viewer;
@@ -54,6 +55,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let filterJson = { filters: [] };
   let isActive = false;
   let addedListener = false;
+  let breakingWidth = 0;
   let mode = 'simple';
   const name = 'origofilteretuna';
   const dom = Origo.ui.dom;
@@ -66,6 +68,20 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const indicatorBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'indicatorBackgroundColor') ? options.indicatorBackgroundColor : '#ff0000';
   const indicatorTextColor = Object.prototype.hasOwnProperty.call(options, 'indicatorTextColor') ? options.indicatorTextColor : '#ffffff';
   const actLikeRadioButton = Object.prototype.hasOwnProperty.call(options, 'actLikeRadioButton') ? options.actLikeRadioButton : true;
+
+  function handleOverlapping() {
+    if (document.getElementsByClassName('o-search').length > 0) {
+      const search = document.getElementsByClassName('o-search')[0];
+      const filter = document.getElementById(filterBoxContent.getId());
+
+      if (isOverlapping(search, filter)) {
+        document.getElementById(filterBox.getId()).style.top = '4rem';
+        breakingWidth = window.innerWidth;
+      } else if (window.innerWidth > breakingWidth) {
+        document.getElementById(filterBox.getId()).style.top = '1rem';
+      }
+    }
+  }
 
   function setActive(state) {
     isActive = state;
@@ -609,6 +625,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       viewer.dispatch('toggleClickInteraction', detail);
     } else if (document.getElementById(filterButton.getId()).classList.contains('tooltip')) {
       enableInteraction();
+      handleOverlapping();
     } else {
       disableInteraction();
     }
@@ -655,7 +672,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       });
 
       filterButton = Origo.ui.Button({
-        cls: 'o-filteretuna padding-small margin-bottom-smaller round light box-shadow',
+        cls: 'o-filteretuna padding-small margin-bottom-smaller round light box-shadow tooltip',
         click() {
           toggleFilter();
         },
@@ -663,13 +680,20 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         textCls: 'text-weight-bold',
         tooltipText: 'Filter',
         tooltipPlacement: 'east',
-        style: 'color: #4a4a4a;'
+        style: {
+          color: '#4a4a4a'
+        }
       });
 
       filterBox = Origo.ui.Element({
         tagName: 'div',
         cls: 'flex column control box bg-white overflow-hidden z-index-top o-hidden filter-box',
-        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 20rem;'
+        style: {
+          left: '4rem',
+          top: '1rem',
+          padding: '0.5rem',
+          width: '20rem'
+        }
       });
 
       simpleModeButton = Origo.ui.Button({
@@ -707,60 +731,103 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
       filterBox = Origo.ui.Element({
         tagName: 'div',
-        cls: 'flex column control box bg-white overflow-hidden z-index-top o-hidden filter-box',
-        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 20rem;'
+        cls: 'flex column control box bg-white overflow-hidden o-hidden filter-box',
+        style: {
+          left: '4rem',
+          top: '1rem',
+          padding: '0.5rem',
+          width: '20rem',
+          'z-index': '-1'
+        }
       });
 
       layerSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'width-100',
-        style: 'font-size: 0.8rem; padding: 0.2rem;',
+        style: {
+          padding: '0.2rem',
+          'font-size': '0.8rem'
+        },
         innerHTML: '<option value="">Välj...</option>'
       });
 
       attributeSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'attributeSelect',
-        style: 'font-size: 0.8rem; padding: 0.2rem; width: 8rem;'
+        style: {
+          padding: '0.2rem',
+          width: '8rem',
+          'font-size': '0.8rem'
+        }
       });
 
       operatorSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'operatorSelect',
-        style: 'font-size: 0.8rem; padding: 0.2rem; width: 5rem; margin-left: 0.4rem;'
+        style: {
+          padding: '0.2rem',
+          width: '5rem',
+          'font-size': '0.8rem',
+          'margin-left': '0.4rem'
+        }
       });
 
       logicSelect = Origo.ui.Element({
         tagName: 'select',
-        style: 'font-size: 0.7rem; padding: 0.2rem;',
+        style: {
+          padding: '0.2rem',
+          'font-size': '0.7rem'
+        },
         innerHTML: '<option value="OR">något</option><option value="AND">alla</option>'
       });
 
       dividerTop = Origo.ui.Element({
         tagName: 'div',
-        style: 'margin-bottom: 0.5rem; margin-top: 0.5rem; height: 1px; background-color: #e8e8e8;'
+        style: {
+          height: '1px',
+          'margin-top': '0.5rem',
+          'margin-bottom': '0.5rem',
+          'background-color': '#e8e8e8'
+        }
       });
 
       dividerBottom = Origo.ui.Element({
         tagName: 'div',
-        style: 'margin-bottom: 0.5rem; margin-top: 0.5rem; height: 1px; background-color: #e8e8e8;'
+        style: {
+          height: '1px',
+          'margin-top': '0.5rem',
+          'margin-bottom': '0.5rem',
+          'background-color': '#e8e8e8'
+        }
       });
 
       createFilterButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: left; background-color: #ebebeb; padding: 0.4rem;',
+        style: {
+          float: 'left',
+          padding: '0.4rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Filtrera'
       });
 
       removeAllFilterButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: right; background-color: #ebebeb; padding: 0.4rem;',
+        style: {
+          float: 'right',
+          padding: '0.4rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Rensa allt'
       });
 
       removeFilterButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: right; background-color: #ebebeb; padding: 0.4rem;',
+        style: {
+          float: 'right',
+          padding: '0.4rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Rensa'
       });
 
@@ -768,19 +835,36 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         cls: 'placeholder-text-smaller smaller',
         value: '',
         placeholderText: '...',
-        style: 'height: 1.5rem; margin: 0; width: 4rem;'
+        style: {
+          height: '1.5rem',
+          margin: '0',
+          width: '4rem'
+        }
       });
 
       removeAttributeButtonSpan = Origo.ui.Element({
         tagName: 'span',
-        style: 'position: absolute; top: -4px; left: 2px;',
+        style: {
+          position: 'absolute',
+          top: '-4px',
+          left: '2px'
+        },
         innerHTML: '&times;'
       });
 
       removeAttributeButton = Origo.ui.Element({
         tagName: 'button',
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip removeAttributeButton o-hidden',
-        style: 'float: right; background-color: #ffa6a6; padding: 0.1rem; height: 16px; width: 16px; margin-top: 2px; position: relative; top: 4px;',
+        style: {
+          float: 'right',
+          padding: '0.1rem',
+          height: '16px',
+          width: '16px',
+          position: 'relative',
+          top: '4px',
+          'margin-top': '2px',
+          'background-color': '#ffa6a6'
+        },
         components: [removeAttributeButtonSpan]
       });
 
@@ -793,14 +877,19 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       attributeText = Origo.ui.Element({
         tagName: 'p',
         cls: 'text-smaller',
-        style: 'width: 9rem; padding-left: 5px;',
+        style: {
+          width: '9rem',
+          'padding-left': '5px'
+        },
         innerHTML: 'Attribut'
       });
 
       operatorText = Origo.ui.Element({
         tagName: 'p',
         cls: 'text-smaller',
-        style: 'width: 5.3rem;',
+        style: {
+          width: '5.3rem'
+        },
         innerHTML: 'Operator'
       });
 
@@ -818,25 +907,35 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
       addAttributeButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: left; background-color: #ebebeb; padding: 0.2rem;',
+        style: {
+          float: 'left',
+          padding: '0.2rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Lägg till attribut'
       });
 
       addAttributeDiv = Origo.ui.Element({
         tagName: 'div',
-        style: 'display: inline-block;',
+        style: {
+          display: 'inline-block'
+        },
         components: [addAttributeButton]
       });
 
       logicFirstText = Origo.ui.Element({
         tagName: 'p',
-        style: 'line-height: 1.3rem;',
+        style: {
+          'line-height': '1.3rem'
+        },
         innerHTML: 'Filtrera'
       });
 
       logicSecondText = Origo.ui.Element({
         tagName: 'p',
-        style: 'line-height: 1.3rem;',
+        style: {
+          'line-height': '1.3rem'
+        },
         innerHTML: 'av följande'
       });
 
@@ -995,6 +1094,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       document.getElementById(simpleModeButton.getId()).addEventListener('click', () => setMode('simple'));
       document.getElementById(advancedModeButton.getId()).addEventListener('click', () => setMode('advanced'));
       document.getElementById(myFilterModeButton.getId()).addEventListener('click', () => setMode('myfilter'));
+
+      window.addEventListener('resize', () => handleOverlapping());
 
       this.dispatch('render');
     }
