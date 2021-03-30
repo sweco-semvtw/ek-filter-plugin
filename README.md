@@ -9,6 +9,7 @@ Gränssnitt för att filtrera föremål i kartan.
 - filterPrefix: Prefix på filtrerade lager i lagerlistan. **Valfri**.
 - indicatorBackgroundColor: Bakgrundsfärg för indikatorn på antal aktiva filter. **Valfri**.
 - indicatorTextColor: Färg på texten för indikatorn på antal aktiva filter. **Valfri**.
+- actLikeRadioButton: Om knappen i verktygslistan ska agera som radio-knapp eller inte. **Valfri**.
 
 **Material icons som används:**
 - ic_delete_24px
@@ -26,7 +27,8 @@ Gränssnitt för att filtrera föremål i kartan.
         optionBackgroundColor: '#e1f2fe',
         filterPrefix: 'Filter - ',
         indicatorBackgroundColor: '#ff0000',
-        indicatorTextColor: '#ffffff'
+        indicatorTextColor: '#ffffff',
+        actLikeRadioButton: false
       });
       viewer.addComponent(origofilteretuna);
     });

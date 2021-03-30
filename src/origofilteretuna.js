@@ -65,17 +65,10 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const filterPrefix = Object.prototype.hasOwnProperty.call(options, 'filterPrefix') ? options.filterPrefix : 'Filter - ';
   const indicatorBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'indicatorBackgroundColor') ? options.indicatorBackgroundColor : '#ff0000';
   const indicatorTextColor = Object.prototype.hasOwnProperty.call(options, 'indicatorTextColor') ? options.indicatorTextColor : '#ffffff';
+  const actLikeRadioButton = Object.prototype.hasOwnProperty.call(options, 'actLikeRadioButton') ? options.actLikeRadioButton : true;
 
   function setActive(state) {
     isActive = state;
-  }
-
-  function toggleFilter() {
-    const detail = {
-      name: 'filter',
-      active: !isActive
-    };
-    viewer.dispatch('toggleClickInteraction', detail);
   }
 
   function getVisibleLayers() {
@@ -592,7 +585,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     document.getElementById(filterButton.getId()).classList.remove('tooltip');
     document.getElementById(filterBox.getId()).classList.remove('o-hidden');
 
-    setActive(true);
+    if (actLikeRadioButton) {
+      setActive(true);
+    }
   }
 
   function disableInteraction() {
@@ -600,7 +595,23 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     document.getElementById(filterButton.getId()).classList.add('tooltip');
     document.getElementById(filterBox.getId()).classList.add('o-hidden');
 
-    setActive(false);
+    if (actLikeRadioButton) {
+      setActive(false);
+    }
+  }
+
+  function toggleFilter() {
+    if (actLikeRadioButton) {
+      const detail = {
+        name: 'filter',
+        active: !isActive
+      };
+      viewer.dispatch('toggleClickInteraction', detail);
+    } else if (document.getElementById(filterButton.getId()).classList.contains('tooltip')) {
+      enableInteraction();
+    } else {
+      disableInteraction();
+    }
   }
 
   function addToMapState(mapState) {
@@ -955,13 +966,15 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         });
       });
 
-      viewer.on('toggleClickInteraction', (detail) => {
-        if (detail.name === 'filter' && detail.active) {
-          enableInteraction();
-        } else {
-          disableInteraction();
-        }
-      });
+      if (actLikeRadioButton) {
+        viewer.on('toggleClickInteraction', (detail) => {
+          if (detail.name === 'filter' && detail.active) {
+            enableInteraction();
+          } else {
+            disableInteraction();
+          }
+        });
+      }
 
       const urlParams = viewer.getUrlParams();
       if (urlParams[name] && urlParams[name].filters.length > 0) {
