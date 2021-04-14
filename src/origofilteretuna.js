@@ -632,7 +632,40 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function addToMapState(mapState) {
+    // eslint-disable-next-line no-param-reassign
     mapState[name] = filterJson;
+  }
+
+  async function handleLayerChanges() {
+    layers = getVisibleLayers();
+    renderLayerSelect();
+    removeAttributeRows();
+    if (layers.length > 0 && selectedLayer) {
+      properties = await getProperties(selectedLayer);
+      initAttributesWithProperties(properties);
+
+      const filter = getCqlFilterFromLayer(selectedLayer);
+      if (filter !== '') {
+        document.getElementById(cqlStringTextarea.getId()).value = filter;
+        setAttributeRowsToFilter(filter);
+      }
+    } else {
+      document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
+    }
+
+    setMyFilters();
+    setMode(mode);
+  }
+
+  function addListenerToLayers() {
+    viewer.getLayers().forEach((layer) => {
+      if (!layer.get('changeListener')) {
+        layer.set('changeListener', true);
+        layer.on('change:visible', async () => {
+          await handleLayerChanges();
+        });
+      }
+    });
   }
 
   return Origo.ui.Component({
@@ -1042,27 +1075,16 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       this.render();
 
       renderLayerSelect();
-      viewer.getLayers().forEach((layer) => {
-        layer.on('change:visible', async () => {
-          layers = getVisibleLayers();
-          renderLayerSelect();
-          removeAttributeRows();
-          if (layers.length > 0 && selectedLayer) {
-            properties = await getProperties(selectedLayer);
-            initAttributesWithProperties(properties);
+      addListenerToLayers();
 
-            const filter = getCqlFilterFromLayer(selectedLayer);
-            if (filter !== '') {
-              document.getElementById(cqlStringTextarea.getId()).value = filter;
-              setAttributeRowsToFilter(filter);
-            }
-          } else {
-            document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
-          }
+      viewer.getMap().getLayers().on('add', async () => {
+        await handleLayerChanges();
+        addListenerToLayers();
+      });
 
-          setMyFilters();
-          setMode(mode);
-        });
+      viewer.getMap().getLayers().on('remove', async () => {
+        await handleLayerChanges();
+        addListenerToLayers();
       });
 
       if (actLikeRadioButton) {
