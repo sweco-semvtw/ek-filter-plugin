@@ -260,7 +260,13 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         const filterArr = filter.split(' ');
         const attr = filterArr[0];
         const opr = filterArr[1];
-        const value = filterArr[2].replaceAll("'", '');
+
+        const valueArr = [];
+        for (let i = 2; i < filterArr.length; i += 1) {
+          valueArr.push(filterArr[i].replaceAll("'", ''));
+        }
+        const value = valueArr.join(' ');
+
         const firstRow = index === 0;
         addAttributeRow(attr, ` ${opr} `, value, firstRow);
       });
