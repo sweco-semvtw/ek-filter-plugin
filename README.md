@@ -49,4 +49,4 @@ SVG för ic_filter_24px
 ```
 
 ### Demo filtrering
-![](filter1.gif)
+![](demofilter.gif)
