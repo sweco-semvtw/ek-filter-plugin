@@ -1,6 +1,13 @@
 # origo-filter-etuna
 
 Gränssnitt för att filtrera föremål i kartan.
+ArcGIS-lager stöds inte för filtrering i dagsläget.
+
+**OBS!**
+För filtrering på WFS från Geoserver krävs att lagret eller dess source har loadingStrategy: **all**
+```JS
+"strategy": "all"
+```
 
 **Parametrar:**
 - excludedAttributes: Egenskaper/attribut som inte ska listas i gränssnittet. **Valfri**.
