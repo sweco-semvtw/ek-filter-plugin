@@ -603,7 +603,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function enableInteraction() {
-    document.getElementById(filterButton.getId()).style.color = '#008ff5';
+    document.getElementById(filterButton.getId()).classList.add('active');
     document.getElementById(filterButton.getId()).classList.remove('tooltip');
     document.getElementById(filterBox.getId()).classList.remove('o-hidden');
 
@@ -613,7 +613,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function disableInteraction() {
-    document.getElementById(filterButton.getId()).style.color = '#4a4a4a';
+    document.getElementById(filterButton.getId()).classList.remove('active');
     document.getElementById(filterButton.getId()).classList.add('tooltip');
     document.getElementById(filterBox.getId()).classList.add('o-hidden');
 
@@ -711,17 +711,13 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       });
 
       filterButton = Origo.ui.Button({
-        cls: 'o-filteretuna padding-small margin-bottom-smaller round light box-shadow tooltip',
+        cls: 'o-filteretuna padding-small margin-bottom-smaller icon-smaller round light box-shadow tooltip',
         click() {
           toggleFilter();
         },
-        text: 'F',
-        textCls: 'text-weight-bold',
+        icon: '#ic_filter_24px',
         tooltipText: 'Filter',
-        tooltipPlacement: 'east',
-        style: {
-          color: '#4a4a4a'
-        }
+        tooltipPlacement: 'east'
       });
 
       filterBox = Origo.ui.Element({
@@ -1045,7 +1041,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
           top: '-0.3rem'
         },
         icon: '#ic_delete_24px',
-        ariaLabel: 'Stäng'
+        ariaLabel: 'Ta bort'
       });
 
       myFilterEditButton = Origo.ui.Button({
