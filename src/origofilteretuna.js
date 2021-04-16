@@ -1,4 +1,5 @@
 import Origo from 'Origo';
+import isOverlapping from './utils/overlapping';
 
 const Origofilteretuna = function Origofilteretuna(options = {}) {
   let viewer;
@@ -9,12 +10,16 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let filterBoxContent;
   let simpleModeButton;
   let advancedModeButton;
+  let myFilterModeButton;
   let createFilterButton;
   let removeAllFilterButton;
   let removeFilterButton;
   let removeAttributeButton;
   let removeAttributeButtonSpan;
   let addAttributeButton;
+  let myFilterRemoveButton;
+  let myFilterEditButton;
+  let myFilterDisplayButton;
   let modeControl;
   let dividerTop;
   let dividerBottom;
@@ -36,6 +41,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let simpleDiv;
   let advancedDiv;
   let filterContentDiv;
+  let filterInnerDiv;
+  let myFilterDiv;
+  let myFilterList;
   let cqlStringTextarea;
   let filterInput;
   let statusIcon;
@@ -43,8 +51,13 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let selectedLayer;
   let layers;
   let properties;
+  let sharemap;
+  let filterJson = { filters: [] };
   let isActive = false;
+  let addedListener = false;
+  let breakingWidth = 0;
   let mode = 'simple';
+  const name = 'origofilteretuna';
   const dom = Origo.ui.dom;
   const layerTypes = ['WMS', 'WFS'];
   const operators = [' = ', ' <> ', ' < ', ' > ', ' <= ', ' >= ', ' like ', ' between '];
@@ -52,25 +65,34 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const excludedLayers = Object.prototype.hasOwnProperty.call(options, 'excludedLayers') ? options.excludedLayers : [];
   const optionBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'optionBackgroundColor') ? options.optionBackgroundColor : '#e1f2fe';
   const filterPrefix = Object.prototype.hasOwnProperty.call(options, 'filterPrefix') ? options.filterPrefix : 'Filter - ';
+  const indicatorBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'indicatorBackgroundColor') ? options.indicatorBackgroundColor : '#ff0000';
+  const indicatorTextColor = Object.prototype.hasOwnProperty.call(options, 'indicatorTextColor') ? options.indicatorTextColor : '#ffffff';
+  const actLikeRadioButton = Object.prototype.hasOwnProperty.call(options, 'actLikeRadioButton') ? options.actLikeRadioButton : true;
+
+  function handleOverlapping() {
+    if (document.getElementsByClassName('o-search').length > 0) {
+      const search = document.getElementsByClassName('o-search')[0];
+      const filter = document.getElementById(filterBoxContent.getId());
+
+      if (isOverlapping(search, filter)) {
+        document.getElementById(filterBox.getId()).style.top = '4rem';
+        breakingWidth = window.innerWidth;
+      } else if (window.innerWidth > breakingWidth) {
+        document.getElementById(filterBox.getId()).style.top = '1rem';
+      }
+    }
+  }
 
   function setActive(state) {
     isActive = state;
   }
 
-  function toggleFilter() {
-    const detail = {
-      name: 'filter',
-      active: !isActive
-    };
-    viewer.dispatch('toggleClickInteraction', detail);
-  }
-
   function getVisibleLayers() {
-    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')) && layer.get('visible'));
+    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')) && layer.get('visible') && !layer.get('ArcGIS'));
   }
 
   function getAllLayers() {
-    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name')));
+    return viewer.getLayers().filter(layer => layerTypes.includes(layer.get('type')) && !excludedLayers.includes(layer.get('name') && !layer.get('ArcGIS')));
   }
 
   function getCqlFilterFromLayer(layer) {
@@ -86,6 +108,93 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       }
     }
     return filter;
+  }
+
+  function getNumberOfLayersWithFilter() {
+    return viewer.getLayers().filter(layer => getCqlFilterFromLayer(layer) !== '').length;
+  }
+
+  function setNumberOfLayersWithFilter() {
+    const numberOfFilters = getNumberOfLayersWithFilter();
+    document.getElementById(statusNumbers.getId()).innerHTML = numberOfFilters;
+    document.getElementById('myFilterCount').innerHTML = numberOfFilters;
+
+    if (numberOfFilters > 0) {
+      document.getElementById(statusIcon.getId()).classList.remove('o-hidden');
+    } else {
+      document.getElementById(statusIcon.getId()).classList.add('o-hidden');
+    }
+  }
+
+  function checkSpecialCharacters(item) {
+    const specialChars = ['å', 'ä', 'ö', 'Å', 'Ä', 'Ö'];
+    let hasSpecialChar = false;
+
+    specialChars.forEach((char) => {
+      if (item.includes(char)) {
+        hasSpecialChar = true;
+      }
+    });
+
+    return hasSpecialChar;
+  }
+
+  function getSourceUrl(layer) {
+    const url = viewer.getSource(layer.get('sourceName')).url;
+    // Ta bort "wms" eller "wfs"
+    return url.slice(0, -3);
+  }
+
+  async function getWfsFeatures(layer, filter) {
+    const filterArr = [];
+    if (filter) {
+      const tempArr = filter.split(' ');
+      // OBS! Om CQL filter sätts på en egenskap med specialtecken t.ex. å, ä eller ö måste egenskapen kapslas in med enkel-citat
+      // OBS! Om en egenskap behövs kapslas in så behövs de andra egenskaperna i anropet också det.
+      const hasSpecialChar = checkSpecialCharacters(filter);
+
+      tempArr.forEach((item, index) => {
+        let isAttribute = false;
+
+        operators.forEach((operator) => {
+          if (tempArr[index + 1] === operator.trim()) {
+            isAttribute = true;
+          }
+        });
+
+        if (hasSpecialChar && isAttribute) {
+          filterArr.push(`'${item}'`);
+        } else {
+          filterArr.push(item);
+        }
+      });
+    }
+    const sourceUrl = getSourceUrl(layer);
+    const url = [
+      `${sourceUrl}`,
+      'wfs?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application/json',
+      `&typeName=${layer.get('name')}`,
+      `${filter ? `&CQL_FILTER=${filterArr.join(' ')}` : ''}`
+    ].join('');
+
+    const response = await fetch(url)
+      .then(res => res.json());
+
+    return response;
+  }
+
+  async function getProperties(layer) {
+    const sourceUrl = getSourceUrl(layer);
+    const url = [
+      `${sourceUrl}`,
+      'wfs?version=1.3.0&request=describeFeatureType&outputFormat=application/json&service=WFS',
+      `&typeName=${layer.get('name')}`
+    ].join('');
+
+    const response = await fetch(url)
+      .then(res => res.json());
+
+    return response.featureTypes[0].properties.filter(prop => !excludedAttributes.includes(prop.name));
   }
 
   function getNumberOfLayersWithFilter() {
@@ -172,6 +281,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     const clone = firstRow ? row : row.cloneNode(true);
 
     if (attribute) {
+      if (!properties) {
+        properties = await getProperties(selectedLayer);
+      }
       const attrIndex = properties.findIndex(prop => prop.name === attribute);
       clone.querySelector(`#${attributeSelect.getId()}`).selectedIndex = attrIndex;
     }
@@ -227,39 +339,42 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         const filterArr = filter.split(' ');
         const attr = filterArr[0];
         const opr = filterArr[1];
-        const value = filterArr[2].replaceAll("'", '');
+
+        const valueArr = [];
+        for (let i = 2; i < filterArr.length; i += 1) {
+          valueArr.push(filterArr[i].replaceAll("'", ''));
+        }
+        const value = valueArr.join(' ');
+
         const firstRow = index === 0;
         addAttributeRow(attr, ` ${opr} `, value, firstRow);
       });
     }
   }
 
-  function setMode(modeString) {
-    mode = modeString;
+  function setMyFilters() {
+    document.getElementById(myFilterList.getId()).innerHTML = '';
+    filterJson.filters.forEach((filter) => {
+      const node = document.createElement('li');
+      node.id = filter.layerName;
+      node.classList = 'rounded border text-smaller padding-small margin-top-small relative o-tooltip';
+      node.innerHTML = `<p style="overflow-wrap: break-word;"><span class="text-weight-bold">Lager: </span>${filter.title}</p><p style="overflow-wrap: break-word;"><span class="text-weight-bold">Filter: </span>${filter.cqlFilter}</p>${myFilterRemoveButton.render()}${myFilterEditButton.render()}${myFilterDisplayButton.render()}`;
 
-    if (mode === 'simple') {
-      document.getElementById(simpleModeButton.getId()).classList.add('active');
-      document.getElementById(advancedModeButton.getId()).classList.remove('active');
-      document.getElementById(simpleDiv.getId()).classList.remove('o-hidden');
-      document.getElementById(advancedDiv.getId()).classList.add('o-hidden');
-    } else if (mode === 'advanced') {
-      document.getElementById(simpleModeButton.getId()).classList.remove('active');
-      document.getElementById(advancedModeButton.getId()).classList.add('active');
-      document.getElementById(simpleDiv.getId()).classList.add('o-hidden');
-      document.getElementById(advancedDiv.getId()).classList.remove('o-hidden');
-    }
-
-    if (selectedLayer) {
-      const filterString = getCqlFilterFromLayer(selectedLayer);
-      setAttributeRowsToFilter(filterString);
-    }
+      if (!viewer.getLayer(filter.layerName).get('visible')) {
+        node.querySelector('.edit-filter').classList.add('disabled');
+        node.querySelector('.display-filter').classList.remove('o-hidden');
+      } else {
+        node.querySelector('.display-filter').classList.add('o-hidden');
+      }
+      document.getElementById(myFilterList.getId()).appendChild(node);
+    });
   }
 
-  function removeFilterTagAndBackground() {
+  function removeFilterTagAndBackground(index) {
     const select = document.getElementById(layerSelect.getId());
-    const currentText = select.options[select.selectedIndex].text;
-    select.options[select.selectedIndex].text = currentText.replace(filterPrefix, '');
-    select.options[select.selectedIndex].style = '';
+    const currentText = select.options[index].text;
+    select.options[index].text = currentText.replace(filterPrefix, '');
+    select.options[index].style = '';
   }
 
   function removeAllFilterTagsAndBackgrounds() {
@@ -270,12 +385,16 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     });
   }
 
-  function addFilterTagAndBackground() {
-    removeFilterTagAndBackground();
+  function addFilterTagAndBackground(layerName) {
     const select = document.getElementById(layerSelect.getId());
-    const currentText = select.options[select.selectedIndex].text;
-    select.options[select.selectedIndex].text = `${filterPrefix}${currentText}`;
-    select.options[select.selectedIndex].style = `background-color: ${optionBackgroundColor}`;
+    select.options.forEach((option, index) => {
+      if (option.value === layerName) {
+        removeFilterTagAndBackground(index);
+        const currentText = option.text;
+        select.options[index].text = `${filterPrefix}${currentText}`;
+        select.options[index].style = `background-color: ${optionBackgroundColor}`;
+      }
+    });
   }
 
   async function setWfsFeaturesOnLayer(layer, filter) {
@@ -285,6 +404,37 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
     layerSource.clear(true);
     layerSource.addFeatures(layerSource.getFormat().readFeatures(features));
+  }
+
+  function setSharedFilters() {
+    filterJson.filters.forEach(async (filter) => {
+      const layer = viewer.getLayer(filter.layerName);
+      if (layer.get('type') === 'WMS') {
+        layer.getSource().updateParams({ layers: filter.layerName, CQL_FILTER: filter.cqlFilter });
+        addFilterTagAndBackground(filter.layerName);
+        setNumberOfLayersWithFilter();
+      } else if (layer.get('type') === 'WFS') {
+        layer.getSource().once('change', () => {
+          if (layer.getSource().getState() === 'ready') {
+            setWfsFeaturesOnLayer(layer, filter.cqlFilter);
+            addFilterTagAndBackground(filter.layerName);
+            setNumberOfLayersWithFilter();
+          }
+        });
+      }
+    });
+  }
+
+  function removeFromJson(layerName) {
+    if (layerName) {
+      filterJson.filters.forEach((filter, index) => {
+        if (filter.layerName === layerName) {
+          filterJson.filters.splice(index, 1);
+        }
+      });
+    } else {
+      filterJson = { filters: [] };
+    }
   }
 
   function createCqlFilter() {
@@ -317,20 +467,33 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     }
 
     if (getCqlFilterFromLayer(selectedLayer) !== '') {
-      addFilterTagAndBackground();
+      addFilterTagAndBackground(selectedLayer.get('name'));
       setNumberOfLayersWithFilter();
+      removeFromJson(selectedLayer.get('name'));
+      filterJson.filters.push({
+        title: selectedLayer.get('title'),
+        layerName: selectedLayer.get('name'),
+        cqlFilter: filterString
+      });
     }
   }
 
-  function removeCqlFilter() {
+  function removeCqlFilter(layerName) {
+    const layer = layerName ? viewer.getLayer(layerName) : selectedLayer;
     document.getElementById(cqlStringTextarea.getId()).value = '';
-    if (selectedLayer.get('type') === 'WMS') {
-      selectedLayer.getSource().updateParams({ layers: selectedLayer.get('name'), CQL_FILTER: undefined });
-    } else if (selectedLayer.get('type') === 'WFS') {
-      setWfsFeaturesOnLayer(selectedLayer);
+
+    if (layer.get('type') === 'WMS') {
+      layer.getSource().updateParams({ layers: layer.get('name'), CQL_FILTER: undefined });
+    } else if (layer.get('type') === 'WFS') {
+      setWfsFeaturesOnLayer(layer);
     }
-    removeFilterTagAndBackground();
+
+    const select = document.getElementById(layerSelect.getId());
+    const index = layerName ? select.querySelector(`option[value="${layerName}"]`).index : select.selectedIndex;
+
+    removeFilterTagAndBackground(index);
     removeAttributeRows();
+    removeFromJson(layer.get('name'));
     setNumberOfLayersWithFilter();
   }
 
@@ -345,6 +508,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     });
     removeAllFilterTagsAndBackgrounds();
     removeAttributeRows();
+    removeFromJson();
     setNumberOfLayersWithFilter();
   }
 
@@ -383,6 +547,32 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     });
   }
 
+  async function selectListnener(evt) {
+    if (evt.target.value !== '') {
+      selectedLayer = viewer.getLayer(evt.target.value);
+      properties = await getProperties(selectedLayer);
+
+      initAttributesWithProperties(properties);
+      removeAttributeRows();
+
+      const currentFilter = getCqlFilterFromLayer(selectedLayer);
+      document.getElementById(cqlStringTextarea.getId()).value = currentFilter;
+
+      if (currentFilter !== '') {
+        setAttributeRowsToFilter(currentFilter);
+      } else {
+        document.getElementById(logicSelect.getId()).selectedIndex = 0;
+        const firstAttributeRow = document.getElementsByClassName('attributeRow')[0];
+        firstAttributeRow.querySelector('input').value = '';
+        firstAttributeRow.querySelector(`#${operatorSelect.getId()}`).value = operators[0];
+      }
+
+      document.getElementById(filterContentDiv.getId()).classList.remove('o-hidden');
+    } else {
+      document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
+    }
+  }
+
   function renderLayerSelect() {
     const select = document.getElementById(layerSelect.getId());
 
@@ -397,52 +587,110 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     select.appendChild(firstOpt);
 
     // Lägg till alla lager till select
-    layers.forEach((queryableLayer) => {
+    layers.forEach((layer) => {
       const opt = document.createElement('option');
-      const filter = getCqlFilterFromLayer(queryableLayer);
-      opt.value = queryableLayer.get('name');
-      opt.text = `${filter !== '' ? filterPrefix : ''}${queryableLayer.get('title')}`;
+      const filter = getCqlFilterFromLayer(layer);
+      opt.value = layer.get('name');
+      opt.text = `${filter !== '' ? filterPrefix : ''}${layer.get('title')}`;
       opt.style = filter !== '' ? `background-color: ${optionBackgroundColor}` : '';
       select.appendChild(opt);
     });
 
     addOperators();
     selectedLayer = viewer.getLayer(select.value);
-
-    select.addEventListener('change', async (e) => {
-      if (e.target.value !== '') {
-        selectedLayer = viewer.getLayer(e.target.value);
-        properties = await getProperties(selectedLayer);
+    if (!addedListener) {
+      select.addEventListener('change', async evt => selectListnener(evt));
+      addedListener = true;
+    }
+  }
 
         initAttributesWithProperties(properties);
         removeAttributeRows();
+  function setMode(modeString) {
+    mode = modeString;
 
-        const currentFilter = getCqlFilterFromLayer(selectedLayer);
-        document.getElementById(cqlStringTextarea.getId()).value = currentFilter;
+    if (mode === 'simple') {
+      document.getElementById(simpleModeButton.getId()).classList.add('active');
+      document.getElementById(advancedModeButton.getId()).classList.remove('active');
+      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
+      document.getElementById(simpleDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(advancedDiv.getId()).classList.add('o-hidden');
+      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
+    } else if (mode === 'advanced') {
+      document.getElementById(simpleModeButton.getId()).classList.remove('active');
+      document.getElementById(advancedModeButton.getId()).classList.add('active');
+      document.getElementById(myFilterModeButton.getId()).classList.remove('active');
+      document.getElementById(simpleDiv.getId()).classList.add('o-hidden');
+      document.getElementById(advancedDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(filterInnerDiv.getId()).classList.remove('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.add('o-hidden');
+    } else if (mode === 'myfilter') {
+      document.getElementById(simpleModeButton.getId()).classList.remove('active');
+      document.getElementById(advancedModeButton.getId()).classList.remove('active');
+      document.getElementById(myFilterModeButton.getId()).classList.add('active');
+      document.getElementById(filterInnerDiv.getId()).classList.add('o-hidden');
+      document.getElementById(myFilterDiv.getId()).classList.remove('o-hidden');
+      setMyFilters();
 
-        if (currentFilter !== '') {
-          setAttributeRowsToFilter(currentFilter);
-        } else {
-          document.getElementById(logicSelect.getId()).selectedIndex = 0;
-          const firstAttributeRow = document.getElementsByClassName('attributeRow')[0];
-          firstAttributeRow.querySelector('input').value = '';
-          firstAttributeRow.querySelector(`#${operatorSelect.getId()}`).value = operators[0];
-        }
+      document.getElementsByClassName('remove-filter').forEach((el) => {
+        el.addEventListener('click', () => {
+          const layerName = el.parentElement.id;
+          removeCqlFilter(layerName);
+          setMyFilters();
+          setMode('myfilter');
+        });
+      });
 
-        document.getElementById(filterContentDiv.getId()).classList.remove('o-hidden');
-      } else {
-        document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
-      }
-    });
+      document.getElementsByClassName('edit-filter').forEach((el) => {
+        el.addEventListener('click', () => {
+          if (!el.classList.contains('disabled')) {
+            const layerName = el.parentElement.id;
+            const layer = viewer.getLayer(layerName);
+            const select = document.getElementById(layerSelect.getId());
+
+            select.selectedIndex = select.querySelector(`option[value="${layerName}"]`).index;
+            select.dispatchEvent(new Event('change'));
+
+            const filterString = getCqlFilterFromLayer(layer);
+            const hasOR = filterString.includes(' OR ');
+            const hasAND = filterString.includes(' AND ');
+
+            // Om det finns både OR och AND så kan det inte visas korrekt i det enkla gränssnittet.
+            if (hasOR && hasAND) {
+              setMode('advanced');
+            } else {
+              setMode('simple');
+            }
+          }
+        });
+      });
+
+      document.getElementsByClassName('display-filter').forEach((el) => {
+        el.addEventListener('click', () => {
+          const layerName = el.parentElement.id;
+          const layer = viewer.getLayer(layerName);
+          layer.set('visible', true);
+          el.parentElement.querySelector('.edit-filter').classList.remove('disabled');
+          el.parentElement.querySelector('.display-filter').classList.add('o-hidden');
+        });
+      });
+    }
+
+    if (selectedLayer) {
+      const filterString = getCqlFilterFromLayer(selectedLayer);
+      setAttributeRowsToFilter(filterString);
+    }
   }
-
 
   function enableInteraction() {
     document.getElementById(filterButton.getId()).style.color = '#008ff5';
     document.getElementById(filterButton.getId()).classList.remove('tooltip');
     document.getElementById(filterBox.getId()).classList.remove('o-hidden');
 
-    setActive(true);
+    if (actLikeRadioButton) {
+      setActive(true);
+    }
   }
 
   function disableInteraction() {
@@ -450,7 +698,61 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     document.getElementById(filterButton.getId()).classList.add('tooltip');
     document.getElementById(filterBox.getId()).classList.add('o-hidden');
 
-    setActive(false);
+    if (actLikeRadioButton) {
+      setActive(false);
+    }
+  }
+
+  function toggleFilter() {
+    if (actLikeRadioButton) {
+      const detail = {
+        name: 'filter',
+        active: !isActive
+      };
+      viewer.dispatch('toggleClickInteraction', detail);
+    } else if (document.getElementById(filterButton.getId()).classList.contains('tooltip')) {
+      enableInteraction();
+      handleOverlapping();
+    } else {
+      disableInteraction();
+    }
+  }
+
+  function addToMapState(mapState) {
+    // eslint-disable-next-line no-param-reassign
+    mapState[name] = filterJson;
+  }
+
+  async function handleLayerChanges() {
+    layers = getVisibleLayers();
+    renderLayerSelect();
+    removeAttributeRows();
+    if (layers.length > 0 && selectedLayer) {
+      properties = await getProperties(selectedLayer);
+      initAttributesWithProperties(properties);
+
+      const filter = getCqlFilterFromLayer(selectedLayer);
+      if (filter !== '') {
+        document.getElementById(cqlStringTextarea.getId()).value = filter;
+        setAttributeRowsToFilter(filter);
+      }
+    } else {
+      document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
+    }
+
+    setMyFilters();
+    setMode(mode);
+  }
+
+  function addListenerToLayers() {
+    viewer.getLayers().forEach((layer) => {
+      if (!layer.get('changeListener')) {
+        layer.set('changeListener', true);
+        layer.on('change:visible', async () => {
+          await handleLayerChanges();
+        });
+      }
+    });
   }
 
   return Origo.ui.Component({
@@ -458,14 +760,28 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     onInit() {
       statusNumbers = Origo.ui.Element({
         tagName: 'span',
-        style: 'color: white; position: absolute; font-size: 0.7rem; left: 5px; top: 0px;',
+        style: {
+          color: `${indicatorTextColor}`,
+          position: 'absolute',
+          left: '5px',
+          top: '0px',
+          'font-size': '0.7rem'
+        },
         innerHTML: '0'
       });
 
       statusIcon = Origo.ui.Element({
         tagName: 'div',
         cls: 'padding-small margin-bottom-smaller round light box-shadow o-hidden',
-        style: 'width: 10px; height: 10px; bottom: 0; position: absolute; right: 0px; z-index: 1; background-color: red;',
+        style: {
+          width: '10px',
+          height: '10px',
+          bottom: 0,
+          position: 'absolute',
+          right: '0px',
+          'background-color': `${indicatorBackgroundColor}`,
+          'z-index': 1
+        },
         components: [statusNumbers]
       });
 
@@ -476,12 +792,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       });
 
       filterButton = Origo.ui.Button({
-        cls: 'o-filteretuna padding-small margin-bottom-smaller round light box-shadow',
+        cls: 'o-filteretuna padding-small margin-bottom-smaller icon-smaller round light box-shadow tooltip',
         click() {
           toggleFilter();
         },
-        text: 'F',
-        textCls: 'text-weight-bold',
+        icon: '#ic_filter_24px',
         tooltipText: 'Filter',
         tooltipPlacement: 'east',
         style: 'color: #4a4a4a;'
@@ -490,83 +805,146 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       filterBox = Origo.ui.Element({
         tagName: 'div',
         cls: 'flex column control box bg-white overflow-hidden z-index-top o-hidden filter-box',
-        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 20rem;'
+        style: {
+          left: '4rem',
+          top: '1rem',
+          padding: '0.5rem',
+          width: '20rem'
+        }
       });
 
       simpleModeButton = Origo.ui.Button({
         cls: 'grow light text-smaller padding-left-large active',
         text: 'Enkel',
+        style: {
+          width: '1rem'
+        },
         state: mode === 'simple' ? 'active' : 'initial'
       });
 
       advancedModeButton = Origo.ui.Button({
         cls: 'grow light text-smaller padding-right-large',
-        text: '1337-läge',
+        text: 'Avancerad',
+        style: {
+          width: '1rem'
+        },
         state: mode === 'advanced' ? 'active' : 'initial'
+      });
+
+      myFilterModeButton = Origo.ui.Button({
+        cls: 'grow light text-smaller padding-right-large',
+        text: 'Mina filter (<span id="myFilterCount">0</span>)',
+        style: {
+          width: '1rem'
+        },
+        state: mode === 'myfilter' ? 'active' : 'initial'
       });
 
       modeControl = Origo.ui.ToggleGroup({
         cls: 'flex rounded bg-inverted border',
-        components: [simpleModeButton, advancedModeButton],
+        components: [simpleModeButton, advancedModeButton, myFilterModeButton],
         style: { display: 'flex' }
       });
 
       filterBox = Origo.ui.Element({
         tagName: 'div',
-        cls: 'flex column control box bg-white overflow-hidden z-index-top o-hidden filter-box',
-        style: 'left: 4rem; top: 1rem; padding: 0.5rem; width: 320px;'
+        cls: 'flex column control box bg-white overflow-hidden o-hidden filter-box',
+        style: {
+          left: '4rem',
+          top: '1rem',
+          padding: '0.5rem',
+          width: '20rem',
+          'z-index': '-1'
+        }
       });
 
       layerSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'width-100',
-        style: 'font-size: 0.8rem; padding: 0.2rem;',
+        style: {
+          padding: '0.2rem',
+          'font-size': '0.8rem'
+        },
         innerHTML: '<option value="">Välj...</option>'
       });
 
       attributeSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'attributeSelect',
-        style: 'font-size: 0.8rem; padding: 0.2rem; width: 44%;'
+        style: {
+          padding: '0.2rem',
+          width: '8rem',
+          'font-size': '0.8rem'
+        }
       });
 
       operatorSelect = Origo.ui.Element({
         tagName: 'select',
         cls: 'operatorSelect',
-        style: 'font-size: 0.8rem; padding: 0.2rem; width: 80px; margin-left: 0.4rem;'
+        style: {
+          padding: '0.2rem',
+          width: '5rem',
+          'font-size': '0.8rem',
+          'margin-left': '0.4rem'
+        }
       });
 
       logicSelect = Origo.ui.Element({
         tagName: 'select',
-        style: 'font-size: 0.7rem; padding: 0.2rem;',
+        style: {
+          padding: '0.2rem',
+          'font-size': '0.7rem'
+        },
         innerHTML: '<option value="OR">något</option><option value="AND">alla</option>'
       });
 
       dividerTop = Origo.ui.Element({
         tagName: 'div',
-        style: 'margin-bottom: 0.5rem; margin-top: 0.5rem; height: 1px; background-color: #e8e8e8;'
+        style: {
+          height: '1px',
+          'margin-top': '0.5rem',
+          'margin-bottom': '0.5rem',
+          'background-color': '#e8e8e8'
+        }
       });
 
       dividerBottom = Origo.ui.Element({
         tagName: 'div',
-        style: 'margin-bottom: 0.5rem; margin-top: 0.5rem; height: 1px; background-color: #e8e8e8;'
+        style: {
+          height: '1px',
+          'margin-top': '0.5rem',
+          'margin-bottom': '0.5rem',
+          'background-color': '#e8e8e8'
+        }
       });
 
       createFilterButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: left; background-color: #ebebeb; padding: 0.4rem;',
+        style: {
+          float: 'left',
+          padding: '0.4rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Filtrera'
       });
 
       removeAllFilterButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: right; background-color: #ebebeb; padding: 0.4rem;',
+        style: {
+          float: 'right',
+          padding: '0.4rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Rensa allt'
       });
 
       removeFilterButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: right; background-color: #ebebeb; padding: 0.4rem;',
+        style: {
+          float: 'right',
+          padding: '0.4rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Rensa'
       });
 
@@ -574,19 +952,36 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         cls: 'placeholder-text-smaller smaller',
         value: '',
         placeholderText: '...',
-        style: 'height: 1.5rem; margin: 0; width: 20%;'
+        style: {
+          height: '1.5rem',
+          margin: '0',
+          width: '4rem'
+        }
       });
 
       removeAttributeButtonSpan = Origo.ui.Element({
         tagName: 'span',
-        style: 'position: absolute; top: -4px; left: 2px;',
+        style: {
+          position: 'absolute',
+          top: '-4px',
+          left: '2px'
+        },
         innerHTML: '&times;'
       });
 
       removeAttributeButton = Origo.ui.Element({
         tagName: 'button',
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip removeAttributeButton o-hidden',
-        style: 'float: right; background-color: #ffa6a6; padding: 0.1rem; height: 16px; width: 16px; margin-top: 2px; position: relative; top: 4px;',
+        style: {
+          float: 'right',
+          padding: '0.1rem',
+          height: '16px',
+          width: '16px',
+          position: 'relative',
+          top: '4px',
+          'margin-top': '2px',
+          'background-color': '#ffa6a6'
+        },
         components: [removeAttributeButtonSpan]
       });
 
@@ -599,14 +994,19 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       attributeText = Origo.ui.Element({
         tagName: 'p',
         cls: 'text-smaller',
-        style: 'width: 9rem; padding-left: 5px;',
+        style: {
+          width: '9rem',
+          'padding-left': '5px'
+        },
         innerHTML: 'Attribut'
       });
 
       operatorText = Origo.ui.Element({
         tagName: 'p',
         cls: 'text-smaller',
-        style: 'width: 5.3rem;',
+        style: {
+          width: '5.3rem'
+        },
         innerHTML: 'Operator'
       });
 
@@ -624,25 +1024,35 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
       addAttributeButton = Origo.ui.Button({
         cls: 'light rounded-large border text-smaller padding-right-large o-tooltip',
-        style: 'float: left; background-color: #ebebeb; padding: 0.2rem;',
+        style: {
+          float: 'left',
+          padding: '0.2rem',
+          'background-color': '#ebebeb'
+        },
         text: 'Lägg till attribut'
       });
 
       addAttributeDiv = Origo.ui.Element({
         tagName: 'div',
-        style: 'display: inline-block;',
+        style: {
+          display: 'inline-block'
+        },
         components: [addAttributeButton]
       });
 
       logicFirstText = Origo.ui.Element({
         tagName: 'p',
-        style: 'line-height: 1.3rem;',
+        style: {
+          'line-height': '1.3rem'
+        },
         innerHTML: 'Filtrera'
       });
 
       logicSecondText = Origo.ui.Element({
         tagName: 'p',
-        style: 'line-height: 1.3rem;',
+        style: {
+          'line-height': '1.3rem'
+        },
         innerHTML: 'av följande'
       });
 
@@ -686,47 +1096,96 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         innerHTML: 'Tända lager:'
       });
 
+      filterInnerDiv = Origo.ui.Element({
+        tagName: 'div',
+        components: [layerText, layerSelect, filterContentDiv]
+      });
+
+      myFilterList = Origo.ui.Element({
+        tagName: 'ul'
+      });
+
+      myFilterDiv = Origo.ui.Element({
+        tagName: 'div',
+        cls: 'o-hidden',
+        components: [myFilterList]
+      });
+
       filterBoxContent = Origo.ui.Element({
         tagName: 'div',
-        components: [modeControl, layerText, layerSelect, filterContentDiv]
+        components: [modeControl, filterInnerDiv, myFilterDiv]
+      });
+
+      myFilterRemoveButton = Origo.ui.Button({
+        cls: 'icon-smaller small round absolute grey-lightest z-index-top remove-filter',
+        style: {
+          right: '-0.3rem',
+          top: '-0.3rem'
+        },
+        icon: '#ic_delete_24px',
+        ariaLabel: 'Ta bort'
+      });
+
+      myFilterEditButton = Origo.ui.Button({
+        cls: 'icon-smaller small round absolute grey-lightest z-index-top edit-filter',
+        style: {
+          right: '1.5rem',
+          top: '-0.3rem'
+        },
+        icon: '#ic_edit_24px',
+        ariaLabel: 'Redigera'
+      });
+
+      myFilterDisplayButton = Origo.ui.Button({
+        cls: 'icon-smaller small round absolute grey-lightest z-index-top display-filter',
+        style: {
+          right: '3.3rem',
+          top: '-0.3rem'
+        },
+        icon: '#ic_visibility_24px',
+        ariaLabel: 'Tänd lager'
       });
     },
     onAdd(evt) {
       viewer = evt.target;
       target = `${viewer.getMain().getMapTools().getId()}`;
       layers = getVisibleLayers();
+      sharemap = viewer.getControlByName('sharemap');
+      if (sharemap && sharemap.options.storeMethod === 'saveStateToServer') {
+        sharemap.addParamsToGetMapState(name, addToMapState);
+      }
 
       this.addComponents([filterButton]);
       this.render();
 
       renderLayerSelect();
-      viewer.getLayers().forEach((layer) => {
-        layer.on('change:visible', async () => {
-          layers = getVisibleLayers();
-          renderLayerSelect();
-          removeAttributeRows();
-          if (layers.length > 0 && selectedLayer) {
-            properties = await getProperties(selectedLayer);
-            initAttributesWithProperties(properties);
+      addListenerToLayers();
 
-            const filter = getCqlFilterFromLayer(selectedLayer);
-            if (filter !== '') {
-              document.getElementById(cqlStringTextarea.getId()).value = filter;
-              setAttributeRowsToFilter(filter);
-            }
+      viewer.getMap().getLayers().on('add', async () => {
+        await handleLayerChanges();
+        addListenerToLayers();
+      });
+
+      viewer.getMap().getLayers().on('remove', async () => {
+        await handleLayerChanges();
+        addListenerToLayers();
+      });
+
+      if (actLikeRadioButton) {
+        viewer.on('toggleClickInteraction', (detail) => {
+          if (detail.name === 'filter' && detail.active) {
+            enableInteraction();
           } else {
             document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
           }
         });
-      });
+      }
 
-      viewer.on('toggleClickInteraction', (detail) => {
-        if (detail.name === 'filter' && detail.active) {
-          enableInteraction();
-        } else {
-          disableInteraction();
-        }
-      });
+      const urlParams = viewer.getUrlParams();
+      if (urlParams[name] && urlParams[name].filters.length > 0) {
+        filterJson = urlParams[name];
+        setSharedFilters();
+      }
     },
     render() {
       document.getElementById(target).appendChild(dom.html(filterDiv.render()));
@@ -740,6 +1199,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       document.getElementById(addAttributeButton.getId()).addEventListener('click', () => addAttributeRow());
       document.getElementById(simpleModeButton.getId()).addEventListener('click', () => setMode('simple'));
       document.getElementById(advancedModeButton.getId()).addEventListener('click', () => setMode('advanced'));
+      document.getElementById(myFilterModeButton.getId()).addEventListener('click', () => setMode('myfilter'));
+
+      window.addEventListener('resize', () => handleOverlapping());
 
       this.dispatch('render');
     }
