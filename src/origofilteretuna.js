@@ -197,85 +197,6 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     return response.featureTypes[0].properties.filter(prop => !excludedAttributes.includes(prop.name));
   }
 
-  function getNumberOfLayersWithFilter() {
-    return viewer.getLayers().filter(layer => getCqlFilterFromLayer(layer) !== '').length;
-  }
-
-  function setNumberOfLayersWithFilter() {
-    const numberOfFilters = getNumberOfLayersWithFilter();
-    document.getElementById(statusNumbers.getId()).innerHTML = numberOfFilters;
-
-    if (numberOfFilters > 0) {
-      document.getElementById(statusIcon.getId()).classList.remove('o-hidden');
-    } else {
-      document.getElementById(statusIcon.getId()).classList.add('o-hidden');
-    }
-  }
-
-  function checkSpecialCharacters(item) {
-    const specialChars = ['å', 'ä', 'ö', 'Å', 'Ä', 'Ö'];
-    let hasSpecialChar = false;
-
-    specialChars.forEach((char) => {
-      if (item.includes(char)) {
-        hasSpecialChar = true;
-      }
-    });
-
-    return hasSpecialChar;
-  }
-
-  function getSourceUrl(layer) {
-    const url = viewer.getSource(layer.get('sourceName')).url;
-    // Ta bort "wms" eller "wfs"
-    return url.slice(0, -3);
-  }
-
-  async function getWfsFeatures(layer, filter) {
-    const filterArr = [];
-    if (filter) {
-      const tempArr = filter.split(' ');
-      // OBS! Om CQL filter sätts på en egenskap med specialtecken t.ex. å, ä eller ö måste egenskapen kapslas in med enkel-citat
-      // OBS! Om en egenskap behövs kapslas in så behövs de andra egenskaperna i anropet också det.
-      const hasSpecialChar = checkSpecialCharacters(filter);
-
-      tempArr.forEach((item, index) => {
-        const isAttribute = tempArr[index + 1] === '=';
-        if (hasSpecialChar && isAttribute) {
-          filterArr.push(`'${item}'`);
-        } else {
-          filterArr.push(item);
-        }
-      });
-    }
-    const sourceUrl = getSourceUrl(layer);
-    const url = [
-      `${sourceUrl}`,
-      'wfs?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application/json',
-      `&typeName=${layer.get('name')}`,
-      `${filter ? `&CQL_FILTER=${filterArr.join(' ')}` : ''}`
-    ].join('');
-
-    const response = await fetch(url)
-      .then(res => res.json());
-
-    return response;
-  }
-
-  async function getProperties(layer) {
-    const sourceUrl = getSourceUrl(layer);
-    const url = [
-      `${sourceUrl}`,
-      'wfs?version=1.3.0&request=describeFeatureType&outputFormat=application/json&service=WFS',
-      `&typeName=${layer.get('name')}`
-    ].join('');
-
-    const response = await fetch(url)
-      .then(res => res.json());
-
-    return response.featureTypes[0].properties.filter(prop => !excludedAttributes.includes(prop.name));
-  }
-
   async function addAttributeRow(attribute, operator, value, firstRow) {
     const row = document.getElementsByClassName('attributeRow')[0];
     const clone = firstRow ? row : row.cloneNode(true);
@@ -604,8 +525,6 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     }
   }
 
-        initAttributesWithProperties(properties);
-        removeAttributeRows();
   function setMode(modeString) {
     mode = modeString;
 
@@ -684,7 +603,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function enableInteraction() {
-    document.getElementById(filterButton.getId()).style.color = '#008ff5';
+    document.getElementById(filterButton.getId()).classList.add('active');
     document.getElementById(filterButton.getId()).classList.remove('tooltip');
     document.getElementById(filterBox.getId()).classList.remove('o-hidden');
 
@@ -694,7 +613,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function disableInteraction() {
-    document.getElementById(filterButton.getId()).style.color = '#4a4a4a';
+    document.getElementById(filterButton.getId()).classList.remove('active');
     document.getElementById(filterButton.getId()).classList.add('tooltip');
     document.getElementById(filterBox.getId()).classList.add('o-hidden');
 
@@ -798,8 +717,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         },
         icon: '#ic_filter_24px',
         tooltipText: 'Filter',
-        tooltipPlacement: 'east',
-        style: 'color: #4a4a4a;'
+        tooltipPlacement: 'east'
       });
 
       filterBox = Origo.ui.Element({
@@ -1176,7 +1094,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
           if (detail.name === 'filter' && detail.active) {
             enableInteraction();
           } else {
-            document.getElementById(filterContentDiv.getId()).classList.add('o-hidden');
+            disableInteraction();
           }
         });
       }
