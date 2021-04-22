@@ -414,7 +414,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     }
 
     const select = document.getElementById(layerSelect.getId());
-    const index = layerName ? select.querySelector(`option[value="${layerName}"]`).index : select.selectedIndex;
+    const selectedOption = select.querySelector(`option[value="${layerName}"]`);
+    const index = layerName && selectedOption ? selectedOption.index : select.selectedIndex;
 
     removeFilterTagAndBackground(index);
     removeAttributeRows();
