@@ -366,9 +366,13 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       const logic = document.getElementById(logicSelect.getId()).value;
 
       rows.forEach((row) => {
-        const att = row.querySelector(`#${attributeSelect.getId()}`).value;
+        let att = row.querySelector(`#${attributeSelect.getId()}`).value;
         const opr = row.querySelector(`#${operatorSelect.getId()}`).value;
         const val = row.querySelector('input').value;
+
+        if (selectedLayer.get('type') === 'WMS' && att.includes(' ')) {
+          att = `'${att}'`;
+        }
 
         if (val !== '') {
           filters.push(`${att}${opr}'${val}'`);
