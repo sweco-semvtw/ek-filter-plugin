@@ -724,17 +724,6 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         tooltipPlacement: 'east'
       });
 
-      filterBox = Origo.ui.Element({
-        tagName: 'div',
-        cls: 'flex column control box bg-white overflow-hidden z-index-top o-hidden filter-box',
-        style: {
-          left: '4rem',
-          top: '1rem',
-          padding: '0.5rem',
-          width: '20rem'
-        }
-      });
-
       simpleModeButton = Origo.ui.Button({
         cls: 'grow light text-smaller padding-left-large active',
         text: 'Enkel',
@@ -775,7 +764,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
           left: '4rem',
           top: '1rem',
           padding: '0.5rem',
-          width: '20rem',
+          width: '25rem',
           'z-index': '-1'
         }
       });
@@ -877,7 +866,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         style: {
           height: '1.5rem',
           margin: '0',
-          width: '4rem'
+          width: '9rem'
         }
       });
 
