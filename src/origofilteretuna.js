@@ -370,7 +370,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         const opr = row.querySelector(`#${operatorSelect.getId()}`).value;
         const val = row.querySelector('input').value;
 
-        if (selectedLayer.get('type') === 'WMS' && att.includes(' ')) {
+        if (selectedLayer.get('type') === 'WMS' && (att.includes(' ') || checkSpecialCharacters(att))) {
           att = `'${att}'`;
         }
 
