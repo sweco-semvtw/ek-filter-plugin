@@ -68,6 +68,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const indicatorBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'indicatorBackgroundColor') ? options.indicatorBackgroundColor : '#ff0000';
   const indicatorTextColor = Object.prototype.hasOwnProperty.call(options, 'indicatorTextColor') ? options.indicatorTextColor : '#ffffff';
   const actLikeRadioButton = Object.prototype.hasOwnProperty.call(options, 'actLikeRadioButton') ? options.actLikeRadioButton : true;
+  const tooltipText = Object.prototype.hasOwnProperty.call(options, 'tooltipText') ? options.tooltipText : 'Filter';
 
   function handleOverlapping() {
     if (document.getElementsByClassName('o-search').length > 0) {
@@ -724,7 +725,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
           toggleFilter();
         },
         icon: '#ic_filter_24px',
-        tooltipText: 'Filter',
+        tooltipText: `${tooltipText}`,
         tooltipPlacement: 'east'
       });
 

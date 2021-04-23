@@ -17,6 +17,7 @@ För filtrering på WFS från Geoserver krävs att lagret eller dess source har 
 - indicatorBackgroundColor: Bakgrundsfärg för indikatorn på antal aktiva filter. **Valfri**.
 - indicatorTextColor: Färg på texten för indikatorn på antal aktiva filter. **Valfri**.
 - actLikeRadioButton: Om knappen i verktygslistan ska agera som radio-knapp eller inte. **Valfri**.
+- tooltipText: Text som ska visas på verktygets tooltip. **Valfri**.
 
 **Material icons som används:**
 - ic_delete_24px
@@ -41,7 +42,8 @@ SVG för ic_filter_24px
         filterPrefix: 'Filter - ',
         indicatorBackgroundColor: '#ff0000',
         indicatorTextColor: '#ffffff',
-        actLikeRadioButton: false
+        actLikeRadioButton: false,
+        tooltipText: 'Filter'
       });
       viewer.addComponent(origofilteretuna);
     });
