@@ -700,7 +700,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         style: {
           width: '10px',
           height: '10px',
-          bottom: 0,
+          bottom: '-6px',
           position: 'absolute',
           right: '0px',
           'background-color': `${indicatorBackgroundColor}`,
@@ -712,6 +712,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       filterDiv = Origo.ui.Element({
         tagName: 'div',
         cls: 'flex column',
+        style: {
+          position: 'relative'
+        },
         components: [statusIcon]
       });
 
