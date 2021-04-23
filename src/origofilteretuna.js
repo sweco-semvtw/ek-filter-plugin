@@ -279,7 +279,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       const node = document.createElement('li');
       node.id = filter.layerName;
       node.classList = 'rounded border text-smaller padding-small margin-top-small relative o-tooltip';
-      node.innerHTML = `<p style="overflow-wrap: break-word;"><span class="text-weight-bold">Lager: </span>${filter.title}</p><p style="overflow-wrap: break-word;"><span class="text-weight-bold">Filter: </span>${filter.cqlFilter}</p>${myFilterRemoveButton.render()}${myFilterEditButton.render()}${myFilterDisplayButton.render()}`;
+      node.innerHTML = `<p style="overflow-wrap: break-word; width: 18rem"><span class="text-weight-bold">Lager: </span>${filter.title}</p><p style="overflow-wrap: break-word;"><span class="text-weight-bold">Filter: </span>${filter.cqlFilter}</p>${myFilterRemoveButton.render()}${myFilterEditButton.render()}${myFilterDisplayButton.render()}`;
 
       if (!viewer.getLayer(filter.layerName).get('visible')) {
         node.querySelector('.edit-filter').classList.add('disabled');
