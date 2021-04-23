@@ -868,9 +868,11 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         value: '',
         placeholderText: '...',
         style: {
-          height: '1.5rem',
-          margin: '0',
-          width: '9rem'
+          height: '26px',
+          padding: '0.3rem',
+          width: '9rem',
+          position: 'absolute',
+          'margin-left': '0.4rem'
         }
       });
 
@@ -910,8 +912,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         tagName: 'p',
         cls: 'text-smaller',
         style: {
-          width: '9rem',
-          'padding-left': '5px'
+          width: '8.6rem',
+          'padding-left': '4px'
         },
         innerHTML: 'Attribut'
       });
@@ -920,7 +922,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         tagName: 'p',
         cls: 'text-smaller',
         style: {
-          width: '5.3rem'
+          width: '5.4rem'
         },
         innerHTML: 'Operator'
       });
