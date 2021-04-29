@@ -43,6 +43,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let filterContentDiv;
   let filterInnerDiv;
   let myFilterDiv;
+  let attributeWarningDiv;
   let myFilterList;
   let cqlStringTextarea;
   let filterInput;
@@ -55,6 +56,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let filterJson = { filters: [] };
   let isActive = false;
   let addedListener = false;
+  let attributesWithSpecialChars;
   let breakingWidth = 0;
   let mode = 'simple';
   const name = 'origofilteretuna';
@@ -69,6 +71,10 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const indicatorTextColor = Object.prototype.hasOwnProperty.call(options, 'indicatorTextColor') ? options.indicatorTextColor : '#ffffff';
   const actLikeRadioButton = Object.prototype.hasOwnProperty.call(options, 'actLikeRadioButton') ? options.actLikeRadioButton : true;
   const tooltipText = Object.prototype.hasOwnProperty.call(options, 'tooltipText') ? options.tooltipText : 'Filter';
+  const warningTooltipText = Object.prototype.hasOwnProperty.call(options, 'warningTooltipText') ? options.warningTooltipText : 'Attribut med Å, Ä, Ö eller mellanslag kan inte användas för filtrering';
+  const warningBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'warningBackgroundColor') ? options.warningBackgroundColor : '#fff700';
+  const warningTextColor = Object.prototype.hasOwnProperty.call(options, 'warningTextColor') ? options.warningTextColor : '#000000';
+  const warningText = Object.prototype.hasOwnProperty.call(options, 'warningText') ? options.warningText : 'OBS!';
 
   function handleOverlapping() {
     if (document.getElementsByClassName('o-search').length > 0) {
@@ -367,13 +373,9 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       const logic = document.getElementById(logicSelect.getId()).value;
 
       rows.forEach((row) => {
-        let att = row.querySelector(`#${attributeSelect.getId()}`).value;
+        const att = row.querySelector(`#${attributeSelect.getId()}`).value;
         const opr = row.querySelector(`#${operatorSelect.getId()}`).value;
         const val = row.querySelector('input').value;
-
-        if (selectedLayer.get('type') === 'WMS' && (att.includes(' ') || checkSpecialCharacters(att))) {
-          att = `'${att}'`;
-        }
 
         if (val !== '') {
           filters.push(`${att}${opr}'${val}'`);
@@ -463,12 +465,20 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         attrSelect.removeChild(attrSelect.firstChild);
       }
 
+      attributesWithSpecialChars = false;
+
       // Lägg till lagrets attribut/properties till select
       properties.forEach((property) => {
         const attribute = property.name;
         const opt = document.createElement('option');
         opt.text = attribute;
         opt.value = attribute;
+
+        if (checkSpecialCharacters(attribute) || attribute.includes(' ')) {
+          opt.disabled = true;
+          attributesWithSpecialChars = true;
+        }
+
         attrSelect.appendChild(opt);
       });
     });
@@ -492,6 +502,12 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         const firstAttributeRow = document.getElementsByClassName('attributeRow')[0];
         firstAttributeRow.querySelector('input').value = '';
         firstAttributeRow.querySelector(`#${operatorSelect.getId()}`).value = operators[0];
+      }
+
+      if (attributesWithSpecialChars) {
+        document.getElementById(attributeWarningDiv.getId()).classList.remove('o-hidden');
+      } else {
+        document.getElementById(attributeWarningDiv.getId()).classList.add('o-hidden');
       }
 
       document.getElementById(filterContentDiv.getId()).classList.remove('o-hidden');
@@ -974,10 +990,26 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         innerHTML: 'av följande'
       });
 
+      attributeWarningDiv = Origo.ui.Element({
+        tagName: 'div',
+        cls: 'rounded-large text-smaller o-tooltip',
+        style: {
+          position: 'absolute',
+          right: '1rem',
+          padding: '0.3rem',
+          color: `${warningTextColor}`,
+          'background-color': `${warningBackgroundColor}`
+        },
+        innerHTML: `${warningText}`,
+        attributes: {
+          title: `${warningTooltipText}`
+        }
+      });
+
       logicDiv = Origo.ui.Element({
         tagName: 'div',
         cls: 'flex text-smaller',
-        components: [logicFirstText, logicSelect, logicSecondText]
+        components: [logicFirstText, logicSelect, logicSecondText, attributeWarningDiv]
       });
 
       simpleDiv = Origo.ui.Element({
