@@ -307,7 +307,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
   function removeAllFilterTagsAndBackgrounds() {
     const select = document.getElementById(layerSelect.getId());
-    select.options.forEach((option) => {
+    Array.from(select.options).forEach((option) => {
       select.options[option.index].text = option.text.replace(filterPrefix, '');
       select.options[option.index].style = '';
     });
@@ -315,7 +315,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
   function addFilterTagAndBackground(layerName) {
     const select = document.getElementById(layerSelect.getId());
-    select.options.forEach((option, index) => {
+    Array.from(select.options).forEach((option, index) => {
       if (option.value === layerName) {
         removeFilterTagAndBackground(index);
         const currentText = option.text;
@@ -369,7 +369,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     let filterString = '';
     if (mode === 'simple') {
       const filters = [];
-      const rows = document.getElementsByClassName('attributeRow');
+      const rows = Array.from(document.getElementsByClassName('attributeRow'));
       const logic = document.getElementById(logicSelect.getId()).value;
 
       rows.forEach((row) => {
@@ -442,7 +442,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function addOperators() {
-    document.getElementsByClassName('operatorSelect').forEach((oprSelect) => {
+    Array.from(document.getElementsByClassName('operatorSelect')).forEach((oprSelect) => {
       // Rensa eventuellt existerande options
       while (oprSelect.firstChild) {
         oprSelect.removeChild(oprSelect.firstChild);
@@ -459,7 +459,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   function initAttributesWithProperties() {
-    document.getElementsByClassName('attributeSelect').forEach((attrSelect) => {
+    Array.from(document.getElementsByClassName('attributeSelect')).forEach((attrSelect) => {
       // Rensa eventuellt existerande options
       while (attrSelect.firstChild) {
         attrSelect.removeChild(attrSelect.firstChild);
@@ -574,7 +574,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       document.getElementById(myFilterDiv.getId()).classList.remove('o-hidden');
       setMyFilters();
 
-      document.getElementsByClassName('remove-filter').forEach((el) => {
+      Array.from(document.getElementsByClassName('remove-filter')).forEach((el) => {
         el.addEventListener('click', () => {
           const layerName = el.parentElement.id;
           removeCqlFilter(layerName);
@@ -583,7 +583,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         });
       });
 
-      document.getElementsByClassName('edit-filter').forEach((el) => {
+      Array.from(document.getElementsByClassName('edit-filter')).forEach((el) => {
         el.addEventListener('click', () => {
           if (!el.classList.contains('disabled')) {
             const layerName = el.parentElement.id;
@@ -607,7 +607,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
         });
       });
 
-      document.getElementsByClassName('display-filter').forEach((el) => {
+      Array.from(document.getElementsByClassName('display-filter')).forEach((el) => {
         el.addEventListener('click', () => {
           const layerName = el.parentElement.id;
           const layer = viewer.getLayer(layerName);
