@@ -22,6 +22,7 @@ För filtrering på WFS från Geoserver krävs att lagret eller dess source har 
 - warningBackgroundColor: Bakgrundsfärg för attribut-varningen. **Valfri**.
 - warningTextColor: Färg på texten för attribut-varningen. **Valfri**.
 - warningText: Text som ska visas i attribut-varningen. **Valfri**.
+- layersUrl: URL till Geoservers /layers endpoint. Ex. https://localhost/geoserver/rest/layers. Denna måste vara angiven för att kunna hämta och mappa FTL till attribut. Både /layers och /workspaces måste vara tillgängligt för GET-anrop. **Valfri**.
 
 **Material icons som används:**
 - ic_delete_24px
@@ -56,7 +57,8 @@ SVG för ic_filter_24px
         warningTooltipText: 'Attribut med Å, Ä, Ö eller mellanslag kan inte användas för filtrering',
         warningBackgroundColor: '#fff700',
         warningTextColor: '#000000',
-        warningText: 'OBS!'
+        warningText: 'OBS!',
+        layersUrl: 'https://karta.eskilstuna.se/geoserver/rest/layers'
       });
       viewer.addComponent(origofilteretuna);
     });

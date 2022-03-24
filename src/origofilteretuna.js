@@ -1,5 +1,6 @@
 import Origo from 'Origo';
 import isOverlapping from './utils/overlapping';
+import FtlMapper from './utils/ftl-mapper';
 
 const Origofilteretuna = function Origofilteretuna(options = {}) {
   let viewer;
@@ -59,6 +60,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   let attributesWithSpecialChars;
   let breakingWidth = 0;
   let mode = 'simple';
+  let ftlMapper;
   const name = 'origofilteretuna';
   const dom = Origo.ui.dom;
   const layerTypes = ['WMS', 'WFS'];
@@ -75,6 +77,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const warningBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'warningBackgroundColor') ? options.warningBackgroundColor : '#fff700';
   const warningTextColor = Object.prototype.hasOwnProperty.call(options, 'warningTextColor') ? options.warningTextColor : '#000000';
   const warningText = Object.prototype.hasOwnProperty.call(options, 'warningText') ? options.warningText : 'OBS!';
+  const layersUrl = Object.prototype.hasOwnProperty.call(options, 'layersUrl') ? options.layersUrl : undefined;
 
   function handleOverlapping() {
     if (document.getElementsByClassName('o-search').length > 0) {
@@ -191,6 +194,13 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   }
 
   async function getProperties(layer) {
+    if (ftlMapper) {
+      const mappedContent = await ftlMapper.getFtlMap(layer);
+      if (mappedContent && mappedContent.length > 0) {
+        return mappedContent;
+      }
+    }
+
     const sourceUrl = getSourceUrl(layer);
     const url = [
       `${sourceUrl}`,
@@ -471,7 +481,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       properties.forEach((property) => {
         const attribute = property.name;
         const opt = document.createElement('option');
-        opt.text = attribute;
+        opt.text = property.ftlValue ? property.ftlValue : attribute;
         opt.value = attribute;
 
         if (checkSpecialCharacters(attribute) || attribute.includes(' ')) {
@@ -489,7 +499,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       selectedLayer = viewer.getLayer(evt.target.value);
       properties = await getProperties(selectedLayer);
 
-      initAttributesWithProperties(properties);
+      initAttributesWithProperties();
       removeAttributeRows();
 
       const currentFilter = getCqlFilterFromLayer(selectedLayer);
@@ -670,7 +680,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
     removeAttributeRows();
     if (layers.length > 0 && selectedLayer) {
       properties = await getProperties(selectedLayer);
-      initAttributesWithProperties(properties);
+      initAttributesWithProperties();
 
       const filter = getCqlFilterFromLayer(selectedLayer);
       if (filter !== '') {
@@ -1107,6 +1117,10 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
 
       this.addComponents([filterButton]);
       this.render();
+
+      if (layersUrl) {
+        ftlMapper = FtlMapper({ layersUrl });
+      }
 
       renderLayerSelect();
       addListenerToLayers();
