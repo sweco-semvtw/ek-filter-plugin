@@ -2,7 +2,7 @@ import Origo from 'Origo';
 
 export default function FtlMapper(options = {}) {
   const {
-    layersUrl
+    geoserverUrl
   } = options;
 
   const getTemplate = async (workspaceUrl) => {
@@ -14,7 +14,7 @@ export default function FtlMapper(options = {}) {
 
   const getWorkspaceDatastore = async (workspaceName, layerName) => {
     if (!workspaceName || !layerName) return null;
-    return fetch(`${layersUrl}/${workspaceName}:${layerName}.json`)
+    return fetch(`${geoserverUrl}/rest/layers/${workspaceName}:${layerName}.json`)
       .then(res => res.json())
       .catch(() => null);
   };
@@ -43,7 +43,12 @@ export default function FtlMapper(options = {}) {
 
   return Origo.ui.Component({
     async getFtlMap(layer) {
-      const workspaceResult = await getWorkspaceDatastore(layer.get('sourceName'), layer.get('name'));
+      const workspace = layer.get('sourceName')
+        .replaceAll(geoserverUrl, '')
+        .replaceAll('/wms', '')
+        .replaceAll('/wfs', '')
+        .replaceAll('/', '');
+      const workspaceResult = await getWorkspaceDatastore(workspace, layer.get('name'));
       if (!workspaceResult) return null;
       const contentFtl = await getTemplate(workspaceResult.layer.resource.href);
       if (!contentFtl) return null;

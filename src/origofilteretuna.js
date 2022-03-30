@@ -77,7 +77,7 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
   const warningBackgroundColor = Object.prototype.hasOwnProperty.call(options, 'warningBackgroundColor') ? options.warningBackgroundColor : '#fff700';
   const warningTextColor = Object.prototype.hasOwnProperty.call(options, 'warningTextColor') ? options.warningTextColor : '#000000';
   const warningText = Object.prototype.hasOwnProperty.call(options, 'warningText') ? options.warningText : 'OBS!';
-  const layersUrl = Object.prototype.hasOwnProperty.call(options, 'layersUrl') ? options.layersUrl : undefined;
+  const geoserverUrl = Object.prototype.hasOwnProperty.call(options, 'geoserverUrl') ? options.geoserverUrl : undefined;
 
   function handleOverlapping() {
     if (document.getElementsByClassName('o-search').length > 0) {
@@ -1118,8 +1118,8 @@ const Origofilteretuna = function Origofilteretuna(options = {}) {
       this.addComponents([filterButton]);
       this.render();
 
-      if (layersUrl) {
-        ftlMapper = FtlMapper({ layersUrl });
+      if (geoserverUrl) {
+        ftlMapper = FtlMapper({ geoserverUrl });
       }
 
       renderLayerSelect();
